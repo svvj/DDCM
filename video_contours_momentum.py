@@ -12,8 +12,9 @@ height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('contours_harder2.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('contours_momentum.mp4', fourcc, fps, (int(width), int(height)))
 
+n = 0
 while cap.isOpened():
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -25,12 +26,22 @@ while cap.isOpened():
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     ret, thresh = cv.threshold(gray, 100, 255, cv.THRESH_BINARY)
 
-    contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    with_contours = cv.drawContours(frame, contours, -1, (0, 255, 0), 1)
+    contours, hierarchy = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
+
+    for i in contours:
+        M = cv.moments(i)
+        if M['m00'] != 0:
+            cX = int(M['m10'] / M['m00'])
+            cY = int(M['m01'] / M['m00'])
+
+            cv.circle(frame, (cX, cY), 1, (255, 0, 0), -1)
+            # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
+        else:
+            print(f"ZeroDivisionPassing: M['m00'] is zero in {i}")
 
     # Show keypoints
     out.write(frame)
-    cv.imshow("contours", with_contours)
+    # cv.imshow("contours", with_contours)
 
     if cv.waitKey(1) == ord('q'):
         break
