@@ -3,16 +3,17 @@
 import numpy as np
 import cv2 as cv
 
-cap = cv.VideoCapture('60fps_DDCM_harder.mp4')
+cap = cv.VideoCapture('240fps.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
 width = cap.get(cv.CAP_PROP_FRAME_WIDTH)
 height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
+
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('contours_harder2.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('contours_240.mp4', fourcc, fps, (int(width), int(height)))
 
 while cap.isOpened():
     # Capture frame-by-frame

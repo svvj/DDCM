@@ -12,9 +12,8 @@ height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('contours_momentum.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('contours_momentum_harder.mp4', fourcc, fps, (int(width), int(height)))
 
-n = 0
 while cap.isOpened():
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -28,16 +27,19 @@ while cap.isOpened():
 
     contours, hierarchy = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
 
+    potential_marker = []
+
     for i in contours:
         M = cv.moments(i)
         if M['m00'] != 0:
             cX = int(M['m10'] / M['m00'])
             cY = int(M['m01'] / M['m00'])
+            potential_marker.append([cX, cY])
 
             cv.circle(frame, (cX, cY), 1, (255, 0, 0), -1)
             # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
         else:
-            print(f"ZeroDivisionPassing: M['m00'] is zero in {i}")
+            print(f"PassingZeroDivision: M['m00'] is zero in {i}")
 
     # Show keypoints
     out.write(frame)

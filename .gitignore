@@ -3,9 +3,14 @@
 *.avi
 *.png
 *.jpg
+*.gif
 
 # ignore tutorial files
 tutorial
 
 # ignore pycharm make file
 .idea
+.sample videos
+
+#
+__pycache__
