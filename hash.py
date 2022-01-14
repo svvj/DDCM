@@ -1,5 +1,6 @@
 import math
 
+#TODO: Make delete function from hash table for used points which are constructing dot clusters
 
 def setDefault(dict, key):
     valueFromKey = dict.get(key, [])

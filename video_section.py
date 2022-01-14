@@ -33,7 +33,7 @@ while cap.isOpened():
     contours, hierarchy = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
     # with_contours = cv.drawContours(frame, contours, -1, (0, 255, 0), 1)
 
-    potential_marker = []
+    marker = []
     hashMap = hash.HashMap(width_section, height_section)
 
     # Draw 10 * 10 Section
@@ -51,10 +51,25 @@ while cap.isOpened():
             # cv.circle(frame, (cX, cY), 2, (0, 0, 255), -1)
             # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
 
+    # Visualize hashed points
+    # for sec in hashMap.grid:
+    #     for point in hashMap.getValuesFromKey(sec):
+    #         color = (0, 255*(int(sec[0]/width_section) % 2), 255*(int(sec[1]/height_section) % 2))
+    #         cv.circle(frame, point, 4, color, -1)
+
+    # TODO: Find keypoint from 2, 3, and 4 dot cluster
+    # Find dot cluster section by section
+    graph = []
     for sec in hashMap.grid:
-        for point in hashMap.getValuesFromKey(sec):
-            color = (0, 255*(int(sec[0]/width_section) % 2), 255*(int(sec[1]/height_section) % 2))
-            cv.circle(frame, point, 4, color, -1)
+        points = hashMap.getValuesFromKey(sec)
+        n = len(points)
+        for i in range(n-1):
+            for j in range(i+1, n):
+                dst = (points[i][0] - points[j][0])**2 + (points[i][1] - points[j][1])**2
+                if dst < 200:
+                    edge = [points[i], points[j]]
+                    cv.line(frame, edge[0], edge[1], (255, 0, 0), 5, 1)
+                    graph.append(edge)
 
     # Show keypoints
     out.write(frame)

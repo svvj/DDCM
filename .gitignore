@@ -5,8 +5,8 @@
 *.jpg
 *.gif
 
-# ignore tutorial files
-tutorial
+# ignore OpenCVTutorial files
+OpenCVTutorial
 
 # ignore pycharm make file
 .idea
