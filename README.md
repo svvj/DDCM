@@ -1,3 +1,5 @@
 # Deformable Dot Cluster Marker
 
-### This repository is for deformable dot cluster marker in opencv, python.
+This is a repository for Deformable Dot Cluster Marker written in OpenCV, Python.
+
+Made by referring to the following paper : http://www.vision.ict.e.titech.ac.jp/projects/DDCM/index.html
