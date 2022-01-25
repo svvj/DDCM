@@ -1,4 +1,4 @@
-# Connect detected markers
+# Identify each markers
 
 import numpy as np
 import cv2 as cv
@@ -17,7 +17,7 @@ height_section = height / section_num
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('contours_section_240.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('video_marker_240.mp4', fourcc, fps, (int(width), int(height)))
 
 save_video = False
 visual_video = True
