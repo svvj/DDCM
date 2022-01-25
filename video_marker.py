@@ -3,6 +3,7 @@
 import numpy as np
 import cv2 as cv
 import hash
+import marker
 
 cap = cv.VideoCapture('240fps.mp4')
 # if not cap.isOpened():
@@ -37,7 +38,7 @@ while cap.isOpened():
     contours, hierarchy = cv.findContours(thresh, cv.RETR_CCOMP, cv.CHAIN_APPROX_NONE)
     # with_contours = cv.drawContours(frame, contours, -1, (0, 255, 0), 1)
 
-    marker = []
+    markers = []
     hashMap = hash.HashMap(width_section, height_section)
 
     # Draw 10 * 10 Section
@@ -66,16 +67,36 @@ while cap.isOpened():
         cv.imshow("grid", frame_copy)
 
     # Find dot cluster section by section
+    visual_marker_edge = True
+    markers = {}
     for key, points in hashMap.grid.items():
-        graph = []
+        edges = []
+        nodes = []
         n = len(points)
         for i in range(n-1):
             for j in range(i+1, n):
+                nodes.append(points[i])
+                nodes.append(points[j])
                 dst = (points[i][0] - points[j][0])**2 + (points[i][1] - points[j][1])**2
                 if dst < 200:
                     edge = [points[i], points[j]]
-                    cv.line(frame, edge[0], edge[1], (255, 0, 0), 2, 1)
-                    graph.append(edge)
+                    if visual_marker_edge:
+                        cv.line(frame, edge[0], edge[1], (255, 0, 0), 2, 1)
+                    edges.append(edge)
+        # Identify markers
+        node_sets = set(nodes)      # Remove duplicates
+        nodes = list(node_sets)
+        marker_1 = list(set(points) - node_sets)        # Saving single points which are not constructing edges
+        subtrees = marker.findSubtreesInBFS(nodes, edges)
+        for i, subtree in enumerate(subtrees):
+            if len(subtree[i]['n']) == 2:
+                marker_2 = subtree[i]
+            elif len(subtree[i]['n']) == 3:
+                marker_3 = subtree[i]
+            elif len(subtree[i]['n']) == 4:
+                marker_4 = subtree[i]
+            else:
+                continue
 
     # Show keypoints
     if save_video:
