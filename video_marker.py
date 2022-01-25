@@ -87,7 +87,7 @@ while cap.isOpened():
         node_sets = set(nodes)      # Remove duplicates
         nodes = list(node_sets)
         marker_1 = list(set(points) - node_sets)        # Saving single points which are not constructing edges
-        subtrees = marker.findSubtreesInBFS(nodes, edges)
+        _, _, subtrees = marker.findSubtreesInBFS(nodes, edges)
         for i, subtree in enumerate(subtrees):
             if len(subtree[i]['n']) == 2:
                 marker_2 = subtree[i]
