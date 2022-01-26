@@ -20,7 +20,7 @@ print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
 out = cv.VideoWriter('video_marker_240.mp4', fourcc, fps, (int(width), int(height)))
 
-save_video = True
+save_video = False
 visual_video = True
 
 
@@ -76,8 +76,6 @@ while cap.isOpened():
             # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
 
     # Visualize hashed points
-
-
     visual_grid = False
     if visual_grid:
         for sec in hashMap.grid:
