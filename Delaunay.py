@@ -1,4 +1,6 @@
-# Identify each markers
+# Delaunay
+
+from scipy.spatial import Delaunay
 
 import numpy as np
 import cv2 as cv
@@ -9,7 +11,7 @@ cap = cv.VideoCapture('240fps.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
-section_num = 6
+section_num = 1
 width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
 width_section = width / section_num
@@ -18,11 +20,11 @@ height_section = height / section_num
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('video_marker_240.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('delaunay_240.mp4', fourcc, fps, (int(width), int(height)))
 
-save_video = False
+save_video = True
 visual_video = True
-
+marker_visual = False
 
 def visualize_marker(markers):
     dot_size = 4
@@ -101,22 +103,36 @@ while cap.isOpened():
                     if visual_marker_edge:
                         cv.line(frame, edge[0], edge[1], (255, 0, 0), 2, 1)
                     edges.append(edge)
+
         # Identify markers
         node_sets = set(nodes)      # Remove duplicates
         nodes = list(node_sets)
         markers['1'] = list(set(points) - node_sets)        # Saving single points which are not constructing edges
+        np_nodes = np.array([list(i) for i in markers['1']])
+
         subtrees = marker.findSubgraphsInBFS(nodes, edges)
         for i, subtree in enumerate(subtrees):
             if len(subtree['n']) == 2:
+                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
                 markers['2'].append(subtree)
             elif len(subtree['n']) == 3:
+                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
                 markers['3'].append(subtree)
             elif len(subtree['n']) == 4:
+                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
                 markers['4'].append(subtree)
             else:
                 continue
 
-        visualize_marker(markers)
+        if marker_visual:
+            visualize_marker(markers)
+
+        delaunay = Delaunay(np_nodes)
+        green = (0, 255, 0)
+        for triangle in delaunay.simplices:
+            cv.line(frame_copy, np_nodes[triangle[0]], np_nodes[triangle[1]], green, 1)
+            cv.line(frame_copy, np_nodes[triangle[1]], np_nodes[triangle[2]], green, 1)
+            cv.line(frame_copy, np_nodes[triangle[2]], np_nodes[triangle[0]], green, 1)
 
     # Show keypoints
     if save_video:
