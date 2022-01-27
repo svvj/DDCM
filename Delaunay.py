@@ -22,9 +22,11 @@ print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
 out = cv.VideoWriter('delaunay_240.mp4', fourcc, fps, (int(width), int(height)))
 
-save_video = True
-visual_video = True
+save_video = False
+visual_video = False
+visual_grid = False
 marker_visual = False
+
 
 def visualize_marker(markers):
     dot_size = 4
@@ -63,12 +65,14 @@ while cap.isOpened():
     hashMap = hash.HashMap(width_section, height_section)
 
     # Draw 10 * 10 Section
-    for s in range(1, section_num):
-        cv.line(frame, (int(width_section * s), 0), (int(width_section * s), height), (0, 255, 255), 1, 1)
-        cv.line(frame, (0, int(height_section * s)), (width, int(height_section * s)), (0, 255, 255), 1, 1)
+    if visual_grid:
+        for s in range(1, section_num):
+            cv.line(frame_copy, (int(width_section * s), 0), (int(width_section * s), height), (0, 255, 255), 1, 1)
+            cv.line(frame_copy, (0, int(height_section * s)), (width, int(height_section * s)), (0, 255, 255), 1, 1)
 
     for i in contours:
         M = cv.moments(i)
+        # Check if it is a closed contour with appropriate area
         if M['m00'] != 0 and cv.contourArea(i) < 100:
             cX = int(M['m10'] / M['m00'])
             cY = int(M['m01'] / M['m00'])
@@ -78,7 +82,6 @@ while cap.isOpened():
             # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
 
     # Visualize hashed points
-    visual_grid = False
     if visual_grid:
         for sec in hashMap.grid:
             for point in hashMap.getPointsFromKey(sec):
@@ -88,7 +91,6 @@ while cap.isOpened():
 
     # Find dot cluster section by section
     visual_marker_edge = True
-    markers = {'1': [], '2': [], '3': [], '4': []}
     for key, points in hashMap.grid.items():
         edges = []
         nodes = []
@@ -105,6 +107,7 @@ while cap.isOpened():
                     edges.append(edge)
 
         # Identify markers
+        markers = {'1': [], '2': [], '3': [], '4': []}
         node_sets = set(nodes)      # Remove duplicates
         nodes = list(node_sets)
         markers['1'] = list(set(points) - node_sets)        # Saving single points which are not constructing edges
@@ -129,10 +132,16 @@ while cap.isOpened():
 
         delaunay = Delaunay(np_nodes)
         green = (0, 255, 0)
-        for triangle in delaunay.simplices:
-            cv.line(frame_copy, np_nodes[triangle[0]], np_nodes[triangle[1]], green, 1)
-            cv.line(frame_copy, np_nodes[triangle[1]], np_nodes[triangle[2]], green, 1)
-            cv.line(frame_copy, np_nodes[triangle[2]], np_nodes[triangle[0]], green, 1)
+        triangles = np_nodes[delaunay.simplices]
+        tri_edges = np.array([[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in triangles])
+        # for t in tri_edges:
+        #     cv.line(frame_copy, t[0][0], t[0][1], green, 1)
+        #     cv.line(frame_copy, t[1][0], t[1][1], green, 1)
+        #     cv.line(frame_copy, t[2][0], t[2][1], green, 1)
+        quadrangles = marker.find_quadrangles(tri_edges)
+
+        print('asdf')
+
 
     # Show keypoints
     if save_video:

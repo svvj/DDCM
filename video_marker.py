@@ -9,7 +9,7 @@ cap = cv.VideoCapture('240fps.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
-section_num = 6
+section_num = 1
 width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
 width_section = width / section_num
@@ -28,17 +28,17 @@ def visualize_marker(markers):
     dot_size = 4
     circle_type = cv.FILLED
     for node in markers['1']:
-        white = (255, 255, 255)
-        cv.circle(frame_copy, node, dot_size, white, circle_type)
-    for subgraph in markers['2']:
         red = (0, 0, 255)
-        cv.circle(frame_copy, subgraph['c'], dot_size, red, circle_type)
-    for subgraph in markers['3']:
+        cv.circle(frame_copy, node, dot_size, red, circle_type)
+    for subgraph in markers['2']:
         green = (0, 255, 0)
         cv.circle(frame_copy, subgraph['c'], dot_size, green, circle_type)
-    for subgraph in markers['4']:
+    for subgraph in markers['3']:
         blue = (255, 0, 0)
         cv.circle(frame_copy, subgraph['c'], dot_size, blue, circle_type)
+    for subgraph in markers['4']:
+        yellow = (0, 255, 255)
+        cv.circle(frame_copy, subgraph['c'], dot_size, yellow, circle_type)
 
 
 while cap.isOpened():
