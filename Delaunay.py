@@ -23,7 +23,7 @@ fourcc = cv.VideoWriter_fourcc(*'mp4v')
 out = cv.VideoWriter('delaunay_240.mp4', fourcc, fps, (int(width), int(height)))
 
 save_video = False
-visual_video = False
+visual_video = True
 visual_grid = False
 marker_visual = False
 
@@ -138,9 +138,13 @@ while cap.isOpened():
         #     cv.line(frame_copy, t[0][0], t[0][1], green, 1)
         #     cv.line(frame_copy, t[1][0], t[1][1], green, 1)
         #     cv.line(frame_copy, t[2][0], t[2][1], green, 1)
-        quadrangles = marker.find_quadrangles(tri_edges)
+        con_quads, quadrangles = marker.find_quadrangles(tri_edges)
 
-        print('asdf')
+        for q in quadrangles:
+            cv.line(frame_copy, q[0][0], q[0][1], green, 1)
+            cv.line(frame_copy, q[1][0], q[1][1], green, 1)
+            cv.line(frame_copy, q[2][0], q[2][1], green, 1)
+            cv.line(frame_copy, q[3][0], q[3][1], green, 1)
 
 
     # Show keypoints

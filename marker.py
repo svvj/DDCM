@@ -36,8 +36,10 @@ def findSubgraphsInBFS(nodes, edges):
 def is_appropriate_quad(quad):
     vec = quad[:, 0] - quad[:, 1]
     n_v = np.array([v / np.linalg.norm(v) for v in vec])
-    L_Se = 1 - 1/3 * (np.dot(n_v[0], n_v[1])) - 1/3 * (np.dot(n_v[2], n_v[3])) - 1/3 * (np.dot(n_v[0], n_v[2]))
-    if 0.9 < L_Se < 1:
+    in_vec = [quad[0][0] - quad[2][0], quad[0][1] - quad[1][0]]
+    n_in_v = np.array([i_v / np.linalg.norm(i_v) for i_v in in_vec])
+    L_Se = 1 - 1/3 * (np.dot(-n_v[0], n_v[1])) - 1/3 * (np.dot(-n_v[2], n_v[3])) - 1/3 * (np.dot(n_in_v[0], n_in_v[1]))
+    if 0.97 <= L_Se < 1.03:
         return True
     else:
         return False
@@ -48,23 +50,23 @@ def find_quadrangles(tri_edges):
     constructed_quad = []
     for i, e in enumerate(tri_edges):
         for j in range(3):
-            t_list = list(np.where(tri_edges == e[j])[0])
+            t_list = list(set(np.where(tri_edges == e[j])[0]))
             quad = np.array([e[(j-1) % 3], e[(j-2) % 3]])
             for t in t_list:
-                if j == t:
+                if i == t or constructed_quad.count([t, i]) != 0:
                     continue
                 ad_tri = tri_edges[t]
                 for idx, a_t in enumerate(ad_tri):
-                    if (a_t == e[j]).all() or (np.array([a_t[1], a_t[0]]) == e[j]).all():
+                    if np.array(a_t == e[j]).all() or (np.array([a_t[1], a_t[0]]) == e[j]).all():
                         ad_idx = idx
-                    ad_edges = np.array([ad_tri[(ad_idx-1) % 3], ad_tri[(ad_idx-2) % 3]])
-                    quad_edges = np.concatenate((quad, ad_edges), axis=0)
-                    constructed_quad.append([i, t])
-                    if is_appropriate_quad(quad_edges):
-                        quadrangles.append(quad_edges)
+                        ad_edges = np.array([ad_tri[(ad_idx-1) % 3], ad_tri[(ad_idx-2) % 3]])
+                        quad_edges = np.concatenate((quad, ad_edges), axis=0)
+                        constructed_quad.append([i, t])
+                        if is_appropriate_quad(quad_edges):
+                            quadrangles.append(quad_edges)
 
     quadrangles = np.array(quadrangles)
-    return quadrangles
+    return constructed_quad, quadrangles
 
 
 def qualify_quadrangles(quad):
