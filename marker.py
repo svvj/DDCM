@@ -34,11 +34,25 @@ def findSubgraphsInBFS(nodes, edges):
 
 
 def is_appropriate_quad(quad):
+    # TODO: Add Condition (i) and Condition (ii) from paper
     vec = quad[:, 0] - quad[:, 1]
     n_v = np.array([v / np.linalg.norm(v) for v in vec])
-    in_vec = [quad[0][0] - quad[2][0], quad[0][1] - quad[1][0]]
+    in_vec = []
+    if quad[0][0] in quad[1]:
+        idx0 = int((quad[0][0] == quad[1][1]).all())
+        if quad[2][0] in quad[3]:
+            in_vec = [quad[0][0] - quad[2][0], quad[0][1] - quad[1][idx0-1]]
+        else:
+            in_vec = [quad[0][0] - quad[2][1], quad[0][1] - quad[1][idx0-1]]
+    else:
+        idx0 = int((quad[0][1] == quad[1][1]).all())
+        if quad[2][0] in quad[3]:
+            in_vec = [quad[0][0] - quad[2][0], quad[0][1] - quad[1][idx0 - 1]]
+        else:
+            in_vec = [quad[0][0] - quad[2][1], quad[0][1] - quad[1][idx0 - 1]]
+
     n_in_v = np.array([i_v / np.linalg.norm(i_v) for i_v in in_vec])
-    L_Se = 1 - 1/3 * (np.dot(-n_v[0], n_v[1])) - 1/3 * (np.dot(-n_v[2], n_v[3])) - 1/3 * (np.dot(n_in_v[0], n_in_v[1]))
+    L_Se = 1 - 1/3 * (np.dot(-n_v[0], n_v[1]))**2 - 1/3 * (np.dot(-n_v[2], n_v[3]))**2 - 1/3 * (np.dot(n_in_v[0], n_in_v[1]))**2
     if 0.97 <= L_Se < 1.03:
         return True
     else:
@@ -46,6 +60,7 @@ def is_appropriate_quad(quad):
 
 
 def find_quadrangles(tri_edges):
+    # TODO: Use BFS
     quadrangles = []
     constructed_quad = []
     for i, e in enumerate(tri_edges):
