@@ -1,4 +1,4 @@
-from collections import deque
+from queue import Queue
 
 import numpy as np
 
@@ -34,29 +34,108 @@ def findSubgraphsInBFS(nodes, edges):
 
 
 def is_appropriate_quad(quad):
-    # TODO: Add Condition (i) and Condition (ii) from paper
+    # TODO: make unique edge list and return
     vec = quad[:, 0] - quad[:, 1]
     n_v = np.array([v / np.linalg.norm(v) for v in vec])
     in_vec = []
     if quad[0][0] in quad[1]:
         idx0 = int((quad[0][0] == quad[1][1]).all())
+        A = quad[0][0]
+        B = quad[0][1]
+        D = quad[1][idx0-1]
         if quad[2][0] in quad[3]:
-            in_vec = [quad[0][0] - quad[2][0], quad[0][1] - quad[1][idx0-1]]
+            C = quad[2][0]
         else:
-            in_vec = [quad[0][0] - quad[2][1], quad[0][1] - quad[1][idx0-1]]
+            C = quad[2][1]
     else:
         idx0 = int((quad[0][1] == quad[1][1]).all())
+        A = quad[0][1]
+        B = quad[0][0]
+        D = quad[1][idx0-1]
         if quad[2][0] in quad[3]:
-            in_vec = [quad[0][0] - quad[2][0], quad[0][1] - quad[1][idx0 - 1]]
+            C = quad[2][0]
         else:
-            in_vec = [quad[0][0] - quad[2][1], quad[0][1] - quad[1][idx0 - 1]]
+            C = quad[2][1]
+    in_vec = [C - A, B - D]
 
     n_in_v = np.array([i_v / np.linalg.norm(i_v) for i_v in in_vec])
     L_Se = 1 - 1/3 * (np.dot(-n_v[0], n_v[1]))**2 - 1/3 * (np.dot(-n_v[2], n_v[3]))**2 - 1/3 * (np.dot(n_in_v[0], n_in_v[1]))**2
-    if 0.97 <= L_Se < 1.03:
-        return True
+    if 0.6 <= L_Se:
+        return True, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]])
     else:
-        return False
+        return False, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]])
+
+def find_index(e, s):
+    for i, n in enumerate(e):
+        if np.equal(n, s).all() or np.equal(np.array([n[1], n[0]]), s).all():
+            return i
+    return False
+
+def condition1(s):
+    c_1 = False
+    AB = (s[0][1] - s[0][0]) / np.linalg.norm(s[0][1] - s[0][0])
+    CB = (s[0][1] - s[2][0]) / np.linalg.norm(s[0][1] - s[2][0])
+    AD = (s[1][1] - s[0][0]) / np.linalg.norm(s[1][1] - s[0][0])
+    CD = (s[1][1] - s[2][0]) / np.linalg.norm(s[1][1] - s[2][0])
+
+    if 1-np.square(np.dot(AB, CD)) < 0.01 and 1-np.square(np.dot(AD, CB)) < 0.01:
+        c_1 = True
+    return c_1
+
+def condition2(s):
+    c_2 = False
+    AB = (s[0][1] - s[0][0]) / np.linalg.norm(s[0][1] - s[0][0])
+    CB = (s[0][1] - s[2][0]) / np.linalg.norm(s[0][1] - s[2][0])
+    AD = (s[1][1] - s[0][0]) / np.linalg.norm(s[1][1] - s[0][0])
+    CD = (s[1][1] - s[2][0]) / np.linalg.norm(s[1][1] - s[2][0])
+
+    if np.square(np.dot(AD, CD)) < 0.01 and 1-np.square(np.dot(AB, CB)) < 0.01:
+        c_2 = True
+    return c_2
+
+def find_e_hat(s_e, s, l):
+    s_l_mid = s[l][1] + (s[l][0] - s[l][1]) / 2
+    s_mid = (s[0][0] + s[2][0]) / 2
+    s_e_mid = np.array([(u[0] + u[1])/2 for u in s_e])
+    hat_mid = np.array(s_l_mid + (s_l_mid - s_mid))
+    for i in range(4):
+        if np.linalg.norm(hat_mid - s_e_mid[i]) < 2:
+            return i
+    return False
+
+def qualify_quadrangles(S):
+    # TODO: Implement algorithm 1 in paper
+    n = S.size
+    e = np.array([[q[0][1], q[1][1]] for q in S])
+    visited = np.zeros(n)
+    M = []
+    #M = np.empty((n, n), dtype=object)
+    for n in range(S.size):
+        if visited[n] == 0:
+            M.append(S[n])
+            Q = Queue()
+            Q.put(S[n])
+            visited[n] = 1
+            while Q.not_empty:
+                s = Q.get()
+                for i in range(4):
+                    idx = find_index(e, s[i])
+                    if idx:
+                        S_e = S[idx]
+                        if condition1(S_e) or condition2(S_e):
+                            e_hat = S_e[find_e_hat(S_e, s, i)]
+                            h_idx = find_index(e, e_hat)
+                            if h_idx:
+                                if visited[h_idx] == 0 and condition1(S[h_idx]):
+                                    M.append(S[h_idx])
+                                Q.put(S[h_idx])
+                                visited[h_idx] = 1
+                                print(Q.qsize())
+                            else:
+                                print('no h_idx')
+                    else:
+                        print('no idx')
+    return M
 
 
 def find_quadrangles(tri_edges):
@@ -77,21 +156,16 @@ def find_quadrangles(tri_edges):
                         ad_edges = np.array([ad_tri[(ad_idx-1) % 3], ad_tri[(ad_idx-2) % 3]])
                         quad_edges = np.concatenate((quad, ad_edges), axis=0)
                         constructed_quad.append([i, t])
-                        if is_appropriate_quad(quad_edges):
-                            quadrangles.append(quad_edges)
+                        a_quad, L, seq_quad = is_appropriate_quad(quad_edges)
+                        if a_quad:
+                            quadrangles.append([L, seq_quad])
 
-    quadrangles = np.array(quadrangles)
-    return constructed_quad, quadrangles
-
-
-def qualify_quadrangles(quad):
-    quadrangles = np.array([])
-    return quadrangles
-
+    quadrangles = np.array(quadrangles, dtype=object)
+    sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1]
+    q_quads = qualify_quadrangles(sorted_quads)
+    return q_quads
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
     n_list = [(0, 0), (0, 1), (0, 2), (0, 3),
               (1, 0), (1, 1), (1, 2), (1, 3),
               (2, 0), (2, 1), (2, 2), (2, 3),
@@ -111,6 +185,3 @@ if __name__ == "__main__":
             x.append(edge[1][0])
             y.append(edge[0][1])
             y.append(edge[1][1])
-
-    plt.plot(x, y)
-    # plt.show()
