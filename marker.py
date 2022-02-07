@@ -1,6 +1,7 @@
 from queue import Queue
 
 import numpy as np
+import cv2 as cv
 
 def mean_int(list):
     return int(sum(list) / len(list))
@@ -103,21 +104,31 @@ def find_e_hat(s_e, s, l):
             return i
     return False
 
-def qualify_quadrangles(S):
-    # TODO: Implement algorithm 1 in paper
+def qualify_quadrangles(S, frame_copy):
+    # TODO: Implement detecting marker by dot numbers
     n = S.size
     e = np.array([[q[0][1], q[1][1]] for q in S])
     visited = np.zeros(n)
     M = []
     #M = np.empty((n, n), dtype=object)
-    for n in range(S.size):
-        if visited[n] == 0:
-            M.append(S[n])
+    for k in range(S.size):
+        if len(M) == 77:
+            break
+        if visited[k] == 0:
+            M.append(S[k])
             Q = Queue()
-            Q.put(S[n])
-            visited[n] = 1
+            Q.put(S[k])
+            visited[k] = 1
+            cnt = 0
             while Q.not_empty:
                 s = Q.get()
+                green = (0, 255, 0)
+                for q in s:
+                    for i in range(4):
+                        cv.line(frame_copy, q[0], q[1], green, 1)
+                cv.imshow("frame1", frame_copy)
+                if cv.waitKey(1) == ord('q'):
+                    cv.destroyAllWindows()
                 for i in range(4):
                     idx = find_index(e, s[i])
                     if idx:
@@ -128,17 +139,18 @@ def qualify_quadrangles(S):
                             if h_idx:
                                 if visited[h_idx] == 0 and condition1(S[h_idx]):
                                     M.append(S[h_idx])
-                                Q.put(S[h_idx])
-                                visited[h_idx] = 1
-                                print(Q.qsize())
-                            else:
-                                print('no h_idx')
-                    else:
-                        print('no idx')
+                                    Q.put(S[h_idx])
+                                    visited[h_idx] = 1
+
+                print(cnt)
+                cnt += 1
+                if Q.empty():
+                    print('queue is empty')
+                    break
     return M
 
 
-def find_quadrangles(tri_edges):
+def find_quadrangles(tri_edges, frame_copy, markers):
     # TODO: Use BFS
     quadrangles = []
     constructed_quad = []
@@ -162,7 +174,7 @@ def find_quadrangles(tri_edges):
 
     quadrangles = np.array(quadrangles, dtype=object)
     sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1]
-    q_quads = qualify_quadrangles(sorted_quads)
+    q_quads = qualify_quadrangles(sorted_quads, frame_copy)
     return q_quads
 
 if __name__ == "__main__":
