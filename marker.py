@@ -104,18 +104,22 @@ def find_e_hat(s_e, s, l):
             return i
     return False
 
+
+def verify_quadrangles(quads):
+    # TODO: verify quads and give ids
+    return quads
+
+
 def qualify_quadrangles(S, frame_copy):
-    # TODO: Implement detecting marker by dot numbers
     n = S.size
     e = np.array([[q[0][1], q[1][1]] for q in S])
     visited = np.zeros(n)
     M = []
-    #M = np.empty((n, n), dtype=object)
     for k in range(S.size):
         if len(M) == 77:
             break
         if visited[k] == 0:
-            M.append(S[k])
+            M.append(verify_quadrangles(S[k]))
             Q = Queue()
             Q.put(S[k])
             visited[k] = 1
@@ -134,11 +138,12 @@ def qualify_quadrangles(S, frame_copy):
                     if idx:
                         S_e = S[idx]
                         if condition1(S_e) or condition2(S_e):
+                            # TODO: give id in verified quads during BFS
                             e_hat = S_e[find_e_hat(S_e, s, i)]
                             h_idx = find_index(e, e_hat)
                             if h_idx:
                                 if visited[h_idx] == 0 and condition1(S[h_idx]):
-                                    M.append(S[h_idx])
+                                    M.append(verify_quadrangles(S[h_idx]))
                                     Q.put(S[h_idx])
                                     visited[h_idx] = 1
 
