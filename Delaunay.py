@@ -107,34 +107,30 @@ while cap.isOpened():
                     edges.append(edge)
 
         # Identify markers
-        markers = {'1': [], '2': [], '3': [], '4': []}
-        node_sets = set(nodes)      # Remove duplicates
+        node_sets = set(nodes)
         nodes = list(node_sets)
-        markers['1'] = list(set(points) - node_sets)        # Saving single points which are not constructing edges
-        np_nodes = np.array([list(i) for i in markers['1']])
+        v_n = [[1, list(o)] for o in list(set(points) - node_sets)]
 
+        np_nodes = np.array([i[1] for i in v_n])        # numpy nodes array for scipy delaunay triangulation
         subtrees = marker.findSubgraphsInBFS(nodes, edges)
         for i, subtree in enumerate(subtrees):
             if len(subtree['n']) == 2:
-                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-                markers['2'].append(subtree)
+                v_n.append([2, subtree['c']])
             elif len(subtree['n']) == 3:
-                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-                markers['3'].append(subtree)
+                v_n.append([3, subtree['c']])
             elif len(subtree['n']) == 4:
-                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-                markers['4'].append(subtree)
+                v_n.append([4, subtree['c']])
             else:
                 continue
+            np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
 
-        if marker_visual:
-            visualize_marker(markers)
 
         delaunay = Delaunay(np_nodes)
         green = (0, 255, 0)
-        triangles = np_nodes[delaunay.simplices]
-        tri_edges = np.array([[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in triangles])
-        quadrangles = marker.find_quadrangles(tri_edges, frame_copy, markers)
+        v_triangles = [[v_n[t[0]], v_n[t[1]], v_n[t[2]]] for t in delaunay.simplices]
+        np_triangles = np_nodes[delaunay.simplices]
+        tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
+        quadrangles = marker.find_quadrangles(tri_edges, frame_copy, np_nodes.tolist(), v_triangles)
 
         for q in quadrangles:
             cv.line(frame_copy, q[0][0], q[0][1], green, 1)

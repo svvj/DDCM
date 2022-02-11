@@ -7,7 +7,6 @@ def mean_int(list):
     return int(sum(list) / len(list))
 
 def findSubgraphsInBFS(nodes, edges):
-    i = 0
     subgraphs = []
 
     for node in nodes:
@@ -107,6 +106,7 @@ def find_e_hat(s_e, s, l):
 
 def verify_quadrangles(quads):
     # TODO: verify quads and give ids
+
     return quads
 
 
@@ -155,7 +155,7 @@ def qualify_quadrangles(S, frame_copy):
     return M
 
 
-def find_quadrangles(tri_edges, frame_copy, markers):
+def find_quadrangles(tri_edges, frame_copy, markers, v_triangles):
     # TODO: Use BFS
     quadrangles = []
     constructed_quad = []
