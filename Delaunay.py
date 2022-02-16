@@ -1,6 +1,7 @@
 # Delaunay
 
 from scipy.spatial import Delaunay
+from frame_by_frame import find_dot_cluster, update_quads
 
 import numpy as np
 import cv2 as cv
@@ -25,7 +26,40 @@ out = cv.VideoWriter('delaunay_240.mp4', fourcc, fps, (int(width), int(height)))
 save_video = False
 visual_video = True
 visual_grid = False
-marker_visual = False
+
+
+def identify_marker(i_points, i_nodes, i_edges):
+    # Identify markers
+    markers = {'1': [], '2': [], '3': [], '4': []}
+    node_sets = set(i_nodes)  # Remove duplicates
+    i_nodes = list(node_sets)
+    markers['1'] = list(set(i_points) - node_sets)  # Saving single points which are not constructing edges
+    np_nodes = np.array([list(i) for i in markers['1']])
+
+    subtrees = marker.findSubgraphsInBFS(i_nodes, i_edges)
+    for i, subtree in enumerate(subtrees):
+        if len(subtree['n']) == 2:
+            np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
+            markers['2'].append(subtree)
+        elif len(subtree['n']) == 3:
+            np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
+            markers['3'].append(subtree)
+        elif len(subtree['n']) == 4:
+            np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
+            markers['4'].append(subtree)
+        else:
+            continue
+    return markers, np_nodes
+
+
+def init_marker(i_points, i_nodes, i_edges):
+    markers, np_nodes = identify_marker(i_points, i_nodes, i_edges)
+
+    delaunay = Delaunay(np_nodes)
+    triangles = np_nodes[delaunay.simplices]
+    tri_edges = np.array([[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in triangles])
+    quadrangles = marker.find_quadrangles(tri_edges, frame_copy, markers)
+    return quadrangles
 
 
 def visualize_marker(markers):
@@ -48,6 +82,7 @@ def visualize_marker(markers):
 while cap.isOpened():
     # Capture frame-by-frame
     ret, frame = cap.read()
+    f_number = int(cap.get(cv.CAP_PROP_POS_FRAMES))
     # if frame is read correctly ret is True
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
@@ -70,6 +105,7 @@ while cap.isOpened():
             cv.line(frame_copy, (int(width_section * s), 0), (int(width_section * s), height), (0, 255, 255), 1, 1)
             cv.line(frame_copy, (0, int(height_section * s)), (width, int(height_section * s)), (0, 255, 255), 1, 1)
 
+
     for i in contours:
         M = cv.moments(i)
         # Check if it is a closed contour with appropriate area
@@ -78,63 +114,31 @@ while cap.isOpened():
             cY = int(M['m01'] / M['m00'])
 
             hashMap.insert((cX, cY))
-            # cv.circle(frame, (cX, cY), 2, (0, 0, 255), -1)
-            # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
 
     # Visualize hashed points
-    if visual_grid:
-        for sec in hashMap.grid:
-            for point in hashMap.getPointsFromKey(sec):
+    points = []
+    for sec in hashMap.grid:
+        for point in hashMap.getPointsFromKey(sec):
+            points.append(point)
+            if visual_grid:
                 color = (0, int(800 * (sec[0] % 2) / section_num), int(800 * (sec[1] % 2) / section_num))
                 cv.circle(frame_copy, point, 4, color, -1)
+    if visual_grid:
         cv.imshow("grid", frame_copy)
 
     # Find dot cluster section by section
     visual_marker_edge = True
-    for key, points in hashMap.grid.items():
-        edges = []
-        nodes = []
-        n = len(points)
-        for i in range(n-1):
-            for j in range(i+1, n):
-                dst = (points[i][0] - points[j][0])**2 + (points[i][1] - points[j][1])**2
-                if dst < 300:
-                    nodes.append(points[i])
-                    nodes.append(points[j])
-                    edge = [points[i], points[j]]
-                    if visual_marker_edge:
-                        cv.line(frame, edge[0], edge[1], (255, 0, 0), 2, 1)
-                    edges.append(edge)
+    nodes, edges = find_dot_cluster(hashMap)
+    n = len(edges)
+    if visual_marker_edge:
+        for e in edges:
+            cv.line(frame, e[0], e[1], (255, 0, 0), 2, 1)
 
-        # Identify markers
-        markers = {'1': [], '2': [], '3': [], '4': []}
-        node_sets = set(nodes)      # Remove duplicates
-        nodes = list(node_sets)
-        markers['1'] = list(set(points) - node_sets)        # Saving single points which are not constructing edges
-        np_nodes = np.array([list(i) for i in markers['1']])
-
-        subtrees = marker.findSubgraphsInBFS(nodes, edges)
-        for i, subtree in enumerate(subtrees):
-            if len(subtree['n']) == 2:
-                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-                markers['2'].append(subtree)
-            elif len(subtree['n']) == 3:
-                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-                markers['3'].append(subtree)
-            elif len(subtree['n']) == 4:
-                np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-                markers['4'].append(subtree)
-            else:
-                continue
-
-        if marker_visual:
-            visualize_marker(markers)
-
-        delaunay = Delaunay(np_nodes)
-        green = (0, 255, 0)
-        triangles = np_nodes[delaunay.simplices]
-        tri_edges = np.array([[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in triangles])
-        quadrangles = marker.find_quadrangles(tri_edges, frame_copy, markers)
+    green = (0, 255, 0)
+    if f_number == 1:
+        quadrangles = init_marker(points, nodes, edges)
+    else:
+        quadrangles = update_quads(quadrangles)
 
         for q in quadrangles:
             cv.line(frame_copy, q[0][0], q[0][1], green, 1)
