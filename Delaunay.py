@@ -1,12 +1,9 @@
 # Delaunay
-
-from scipy.spatial import Delaunay
-from frame_by_frame import find_dot_cluster, update_quads
+from frame_by_frame import find_dot_cluster, init_marker, update_quads
 
 import numpy as np
 import cv2 as cv
 import hash
-import marker
 
 cap = cv.VideoCapture('240fps.mp4')
 # if not cap.isOpened():
@@ -26,39 +23,6 @@ out = cv.VideoWriter('delaunay_240.mp4', fourcc, fps, (int(width), int(height)))
 save_video = False
 visual_video = True
 visual_grid = False
-
-
-def identify_marker(i_points, i_nodes, i_edges):
-    # Identify markers
-    node_sets = set(i_nodes)
-    i_nodes = list(node_sets)
-    v_n = [[1, list(o)] for o in list(set(i_points) - node_sets)]
-
-    np_nodes = np.array([i[1] for i in v_n])  # numpy nodes array for scipy delaunay triangulation
-    subtrees = marker.findSubgraphsInBFS(i_nodes, i_edges)
-    for i, subtree in enumerate(subtrees):
-        if len(subtree['n']) == 2:
-            v_n.append([2, subtree['c']])
-        elif len(subtree['n']) == 3:
-            v_n.append([3, subtree['c']])
-        elif len(subtree['n']) == 4:
-            v_n.append([4, subtree['c']])
-        else:
-            continue
-        np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
-    return v_n, np_nodes
-
-
-def init_marker(i_points, i_nodes, i_edges):
-    v_n, np_nodes = identify_marker(i_points, i_nodes, i_edges)
-
-    delaunay = Delaunay(np_nodes)
-    np_triangles = np_nodes[delaunay.simplices]
-    v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
-    tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
-    v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
-    quadrangles = marker.find_quadrangles(tri_edges, v_edges, frame_copy)
-    return quadrangles
 
 
 def visualize_marker(markers):
@@ -135,9 +99,9 @@ while cap.isOpened():
 
     green = (0, 255, 0)
     if f_number == 1:
-        quadrangles = init_marker(points, nodes, edges)
+        v_n, np_nodes, quadrangles = init_marker(points, nodes, edges, frame_copy)
     else:
-        quadrangles = update_quads(quadrangles)
+        quadrangles = update_quads(v_n, np_nodes, quadrangles)
 
         for q in quadrangles:
             cv.line(frame_copy, q[0][0], q[0][1], green, 1)
