@@ -138,12 +138,14 @@ def qualify_quadrangles(S, frame_copy):
     n = S.size
     e = np.array([[q[0][1], q[1][1]] for q in S])
     visited = np.zeros(n)
+    M_S = []
     M = []
     for k in range(S.size):
         if len(M) == 77:
             break
         if visited[k] == 0:
             M.append(verify_quadrangles(S[k]))
+            M_S.append(m_S[k])
             Q = Queue()
             Q.put(S[k])
             visited[k] = 1
@@ -168,6 +170,7 @@ def qualify_quadrangles(S, frame_copy):
                             if h_idx:
                                 if visited[h_idx] == 0 and condition1(S[h_idx]):
                                     M.append(verify_quadrangles(S[h_idx]))
+                                    M_S.append(m_S[h_idx])
                                     Q.put(S[h_idx])
                                     visited[h_idx] = 1
 
@@ -176,7 +179,7 @@ def qualify_quadrangles(S, frame_copy):
                 if Q.empty():
                     print('queue is empty')
                     break
-    return M
+    return M, M_S
 
 
 def find_quadrangles(tri_edges, v_edges, frame_copy):
@@ -203,8 +206,8 @@ def find_quadrangles(tri_edges, v_edges, frame_copy):
 
     quadrangles = np.array(quadrangles, dtype=object)
     sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1:3]
-    q_quads = qualify_quadrangles(sorted_quads, frame_copy)
-    return q_quads
+    q_quads, m_quads = qualify_quadrangles(sorted_quads, frame_copy)
+    return q_quads, m_quads
 
 
 if __name__ == "__main__":

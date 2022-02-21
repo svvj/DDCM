@@ -1,5 +1,6 @@
 # Delaunay
 from frame_by_frame import find_dot_cluster, init_marker, update_quads
+from marker_array import m_array
 
 import numpy as np
 import cv2 as cv
@@ -25,21 +26,28 @@ visual_video = True
 visual_grid = False
 
 
-def visualize_marker(markers):
+def visualize_marker(f, m, n_nodes, pos):
     dot_size = 4
     circle_type = cv.FILLED
-    for node in markers['1']:
-        white = (255, 255, 255)
-        cv.circle(frame_copy, node, dot_size, white, circle_type)
-    for subgraph in markers['2']:
-        red = (0, 0, 255)
-        cv.circle(frame_copy, subgraph['c'], dot_size, red, circle_type)
-    for subgraph in markers['3']:
-        green = (0, 255, 0)
-        cv.circle(frame_copy, subgraph['c'], dot_size, green, circle_type)
-    for subgraph in markers['4']:
-        blue = (255, 0, 0)
-        cv.circle(frame_copy, subgraph['c'], dot_size, blue, circle_type)
+
+    for j, row in enumerate(pos):
+        for i, p in enumerate(row):
+            for k in range(len(n_nodes)):
+                if np.array_equal(n_nodes[k], p):
+                    mark = m[k][0]
+                    break
+            if mark == 1:
+                color = (255, 255, 255)     # white
+            elif mark == 2:
+                color = (0, 0, 255)         # red
+            elif mark == 3:
+                color = (0, 255, 0)         # green
+            else:
+                color = (255, 0, 0)         # blue
+
+            cv.circle(f, p, dot_size, color, circle_type)
+
+    cv.imshow("marker", frame_copy)
 
 
 while cap.isOpened():
@@ -99,15 +107,18 @@ while cap.isOpened():
 
     green = (0, 255, 0)
     if f_number == 1:
-        v_n, np_nodes, quadrangles = init_marker(points, nodes, edges, frame_copy)
+        v_n, n_nodes, m_quads, quadrangles = init_marker(points, nodes, edges, frame_copy)
+        unique_markers = np.unique(np.array(quadrangles).reshape(-1, 2), axis=0).reshape(12, 8, 2)
+        visualize_marker(frame_copy, v_n, n_nodes, unique_markers)
     else:
-        quadrangles = update_quads(v_n, np_nodes, quadrangles)
+        print(quadrangles)
+        #quadrangles = update_quads(_, _, quadrangles)
 
-        for q in quadrangles:
-            cv.line(frame_copy, q[0][0], q[0][1], green, 1)
-            cv.line(frame_copy, q[1][0], q[1][1], green, 1)
-            cv.line(frame_copy, q[2][0], q[2][1], green, 1)
-            cv.line(frame_copy, q[3][0], q[3][1], green, 1)
+    for q in quadrangles:
+        cv.line(frame_copy, q[0][0], q[0][1], green, 1)
+        cv.line(frame_copy, q[1][0], q[1][1], green, 1)
+        cv.line(frame_copy, q[2][0], q[2][1], green, 1)
+        cv.line(frame_copy, q[3][0], q[3][1], green, 1)
 
 
     # Show keypoints

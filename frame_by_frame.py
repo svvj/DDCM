@@ -52,8 +52,8 @@ def init_marker(i_points, i_nodes, i_edges, frame_copy):
     v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
     tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
     v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
-    quadrangles = find_quadrangles(tri_edges, v_edges, frame_copy)
-    return v_n, np_nodes, quadrangles
+    quadrangles, m_quads = find_quadrangles(tri_edges, v_edges, frame_copy)
+    return v_n, np_nodes, m_quads, quadrangles
 
 
 def update_quads(n, np_n, quad):
