@@ -44,17 +44,14 @@ def is_appropriate_quad(v_quad):
     # TODO: make unique edge list and return
     m = np.array(v_quad[:, :, 0].tolist())
     quad = np.array(v_quad[:, :, 1].tolist())
-    vertices = unique_rows(quad.reshape(8, 2))
-    quad_c = np.sum(vertices, axis=0) / 4
-    vecs = vertices - quad_c
     vec = quad[:, 0] - quad[:, 1]
     n_v = np.array([v / np.linalg.norm(v) for v in vec])
-    '''
+    nodes = np.unique(quad.reshape(-1, 2), axis=0)
     if quad[0][0] in quad[1]:
         idx0 = int((quad[0][0] == quad[1][1]).all())
         a = [0, 0]
         b = [0, 1]
-        d = [1, idx0-1]
+        d = [1, idx0 - 1]
         if quad[2][0] in quad[3]:
             c = [2, 0]
         else:
@@ -72,15 +69,14 @@ def is_appropriate_quad(v_quad):
     B = quad[b[0]][b[1]]
     C = quad[c[0]][c[1]]
     D = quad[d[0]][d[1]]
-    '''
 
     in_vec = [C - A, B - D]
     marker_id = np.array([m[a[0]][a[1]], m[b[0]][b[1]], m[c[0]][c[1]], m[d[0]][d[1]]])
 
     n_in_v = np.array([i_v / np.linalg.norm(i_v) for i_v in in_vec])
-    L_Se = 1 - 1/3 * (np.dot(-n_v[0], n_v[1]))**2 \
-             - 1/3 * (np.dot(-n_v[2], n_v[3]))**2 \
-             - 1/3 * (np.dot(n_in_v[0], n_in_v[1]))**2
+    L_Se = 1 - 1 / 3 * (np.dot(-n_v[0], n_v[1])) ** 2 \
+           - 1 / 3 * (np.dot(-n_v[2], n_v[3])) ** 2 \
+           - 1 / 3 * (np.dot(n_in_v[0], n_in_v[1])) ** 2
     if 0.6 <= L_Se:
         return True, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]]), marker_id
     else:
@@ -147,14 +143,17 @@ def qualify_quadrangles(S, frame_copy):
     n = S.size
     e = np.array([[q[0][1], q[1][1]] for q in S])
     visited = np.zeros(n)
-    M = np.full([7, 11], None).tolist()
+    M = [[-1] * 12] * 8
     for k in range(n):
         if count_not_none(M) == 77:
             break
         if visited[k] == 0:
             rc_idx = find_marker(m_S[k])
             if rc_idx:
-                M[rc_idx[0]][rc_idx[1]] = S[k]
+                r = rc_idx[0]
+                c = rc_idx[1]
+                M[r][c] = S[k]
+
             else:
                 continue
             Q = Queue()
