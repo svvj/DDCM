@@ -1,8 +1,14 @@
 from queue import Queue
-from marker_array import m_array
+from itertools import combinations
 
 import numpy as np
 import cv2 as cv
+import json
+
+with open('m_array.json') as f:
+    m_array = json.load(f)['m_array']
+
+M = (np.ones((8, 12), dtype=int) * -1).tolist()
 
 def mean_int(list):
     return int(sum(list) / len(list))
@@ -46,32 +52,23 @@ def is_appropriate_quad(v_quad):
     quad = np.array(v_quad[:, :, 1].tolist())
     vec = quad[:, 0] - quad[:, 1]
     n_v = np.array([v / np.linalg.norm(v) for v in vec])
-    nodes = np.unique(quad.reshape(-1, 2), axis=0)
-    if quad[0][0] in quad[1]:
-        idx0 = int((quad[0][0] == quad[1][1]).all())
-        a = [0, 0]
-        b = [0, 1]
-        d = [1, idx0 - 1]
-        if quad[2][0] in quad[3]:
-            c = [2, 0]
-        else:
-            c = [2, 1]
-    else:
-        idx0 = int((quad[0][1] == quad[1][1]).all())
-        a = [0, 1]
-        b = [0, 0]
-        d = [1, idx0 - 1]
-        if quad[2][0] in quad[3]:
-            c = [2, 0]
-        else:
-            c = [2, 1]
-    A = quad[a[0]][a[1]]
-    B = quad[b[0]][b[1]]
-    C = quad[c[0]][c[1]]
-    D = quad[d[0]][d[1]]
+
+    nodes = np.unique(quad.reshape(-1).reshape(-1, 2), axis=0)
+    A = nodes[0] if (nodes[0][1] <= nodes[1][1]) else nodes[1]
+    a = [quad.reshape(-1, 2).tolist().index(A.tolist()) // 2, quad.reshape(-1, 2).tolist().index(A.tolist()) % 2]
+    A_near = [i for i, value in enumerate(quad.reshape(-1, 2).tolist()) if value == A.tolist()]
+
+    prob_bd = [[A_near[0] // 2, 1-(A_near[0] % 2)], [A_near[1] // 2, 1-(A_near[1] % 2)]]
+    prob_BD = [quad[prob_bd[0][0]][prob_bd[0][1]], quad[prob_bd[1][0]][prob_bd[1][1]]]
+
+    B, D, b, d = (prob_BD[0], prob_BD[1], prob_bd[0], prob_bd[1]) if prob_BD[0][1] <= prob_BD[1][1] \
+                 else (prob_BD[1], prob_BD[0], prob_bd[1], prob_bd[0])
+    C = np.array([c for c in nodes if c.tolist() not in [A.tolist(), B.tolist(), D.tolist()]]).reshape(2)
+    c = [quad.reshape(-1, 2).tolist().index(C.tolist()) // 2, quad.reshape(-1, 2).tolist().index(C.tolist()) % 2]
 
     in_vec = [C - A, B - D]
-    marker_id = np.array([m[a[0]][a[1]], m[b[0]][b[1]], m[c[0]][c[1]], m[d[0]][d[1]]])
+
+    marker_id = [m[a[0]][a[1]], m[b[0]][b[1]], m[d[0]][d[1]], m[c[0]][c[1]]]
 
     n_in_v = np.array([i_v / np.linalg.norm(i_v) for i_v in in_vec])
     L_Se = 1 - 1 / 3 * (np.dot(-n_v[0], n_v[1])) ** 2 \
@@ -82,11 +79,13 @@ def is_appropriate_quad(v_quad):
     else:
         return False, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]]), marker_id
 
+
 def find_index(e, s):
     for i, n in enumerate(e):
         if np.equal(n, s).all() or np.equal(np.array([n[1], n[0]]), s).all():
             return i
     return False
+
 
 def condition1(s):
     c_1 = False
@@ -99,6 +98,7 @@ def condition1(s):
         c_1 = True
     return c_1
 
+
 def condition2(s):
     c_2 = False
     AB = (s[0][1] - s[0][0]) / np.linalg.norm(s[0][1] - s[0][0])
@@ -109,6 +109,20 @@ def condition2(s):
     if np.square(np.dot(AD, CD)) < 0.01 and 1-np.square(np.dot(AB, CB)) < 0.01:
         c_2 = True
     return c_2
+
+
+def change_config_S(edges, quads):
+    new_quads = []
+    for q in quads:
+        new_q = []
+        for eg in q:
+            if [eg[1], eg[0]] in edges:
+                new_q.append(edges.index([eg[1], eg[0]]))
+            elif eg in edges:
+                new_q.append(edges.index(eg))
+        new_quads.append(new_q)
+    return new_quads
+
 
 def find_e_hat(s_e, s, l):
     s_l_mid = s[l][1] + (s[l][0] - s[l][1]) / 2
@@ -130,6 +144,35 @@ def find_marker(m):
     return False
 
 
+def check_marker(idx, square, s_idx):
+    global M
+
+    r, c = idx
+    filled = []
+    if M[r][c] != -1:
+        filled.append(0)
+    if M[r + 1][c] != -1:
+        filled.append(1)
+    if M[r][c + 1] != -1:
+        filled.append(2)
+    if M[r + 1][c + 1] != -1:
+        filled.append(3)
+    if len(filled) == 0:
+        possible_edges = [0, 1, 2, 3]
+        return possible_edges, False
+
+    M[r][c] = square[s_idx][0][0]           # A
+    M[r + 1][c] = square[s_idx][0][1]       # B
+    M[r][c + 1] = square[s_idx][1][1]       # D
+    M[r + 1][c + 1] = square[s_idx][2][0]   # C
+
+    not_filled = list(set([0, 1, 2, 3]) - set(filled))
+    possible_edges = {(0, 1), (0, 2), (1, 3), (2, 3)}
+    comb = set(combinations(filled, 2))
+    filled_edges = list(possible_edges & comb)
+    return filled_edges, True
+
+
 def count_not_none(l):
     cnt = 0
     for i in l:
@@ -137,57 +180,78 @@ def count_not_none(l):
     return cnt
 
 
-def qualify_quadrangles(S, frame_copy):
-    m_S = S[:, 0]
-    S = S[:, 1]
-    n = S.size
-    e = np.array([[q[0][1], q[1][1]] for q in S])
+def qualify_quadrangles(input, frame_copy):
+    global M
+
+    m_S = input[:, 0]
+    n = m_S.size
+
+    np_S = np.array(input[:, 1].tolist(), dtype=int)
+
+    e_list = np_S.reshape(-1, 2, 2).tolist()
+    S_list = np_S.tolist()
+    for edge in e_list:
+        if [edge[1], edge[0]] in e_list:
+            del e_list[e_list.index([edge[1], edge[0]])]
+    S = change_config_S(e_list, S_list)
     visited = np.zeros(n)
-    M = [[-1] * 12] * 8
+    m_visited = np.zeros((7, 11), dtype=int).tolist()
     for k in range(n):
-        if count_not_none(M) == 77:
-            break
         if visited[k] == 0:
+            Q = Queue()
             rc_idx = find_marker(m_S[k])
             if rc_idx:
-                r = rc_idx[0]
-                c = rc_idx[1]
-                M[r][c] = S[k]
-
+                filled_marker, is_filled = check_marker(rc_idx, S[k], k)
+                Q.put([rc_idx, S[k], filled_marker])
             else:
                 continue
-            Q = Queue()
-            Q.put(S[k])
+
             visited[k] = 1
             cnt = 0
             while Q.not_empty:
-                s = Q.get()
+                rc_idx, s, filled_marker = Q.get()
+                m_visited[rc_idx[0]][rc_idx[1]] = 1
+
                 green = (0, 255, 0)
-                '''
-                for q in s:
-                    for _ in range(4):
-                        cv.line(frame_copy, q[0], q[1], green, 1)
+                for q in [s[f] for f in filled_marker]:
+                    cv.line(frame_copy, q[0], q[1], green, 1)
                 cv.imshow("frame1", frame_copy)
                 if cv.waitKey(1) == ord('q'):
                     cv.destroyAllWindows()
-                '''
-                for i in range(4):
+
+                for i in filled_marker:
                     idx = find_index(e, s[i])
                     if idx:
                         S_e = S[idx]
+
+                        red = (0, 0, 255)
+                        for q in [s[f] for f in filled_marker]:
+                            cv.line(frame_copy, q[0], q[1], red, 1)
+                        cv.imshow("frame1", frame_copy)
+                        if cv.waitKey(1) == ord('q'):
+                            cv.destroyAllWindows()
+
                         if condition1(S_e) or condition2(S_e):
-                            # TODO: give id in verified quads during BFS
                             e_hat = S_e[find_e_hat(S_e, s, i)]
                             h_idx = find_index(e, e_hat)
                             if h_idx:
                                 if visited[h_idx] == 0 and condition1(S[h_idx]):
                                     rc_idx = find_marker(m_S[h_idx])
+
+                                    green = (0, 255, 0)
+                                    for q in [s[f] for f in filled_marker]:
+                                        cv.line(frame_copy, q[0], q[1], green, 1)
+                                    cv.imshow("frame1", frame_copy)
+                                    if cv.waitKey(1) == ord('q'):
+                                        cv.destroyAllWindows()
+
                                     if rc_idx:
-                                        M[rc_idx[0]][rc_idx[1]] = S[h_idx]
+                                        filled_marker, is_filled = check_marker(rc_idx, S[h_idx], h_idx)
                                     else:
                                         continue
-                                    Q.put(S[h_idx])
+                                    Q.put([rc_idx, S[k], filled_marker])
                                     visited[h_idx] = 1
+                                    m_visited[rc_idx[0]][rc_idx[1]] = 1
 
                 print(cnt)
                 cnt += 1
