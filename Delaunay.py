@@ -7,7 +7,7 @@ import cv2 as cv
 import hash
 import marker
 
-cap = cv.VideoCapture('240fps.mp4')
+cap = cv.VideoCapture('data/slow.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
@@ -20,7 +20,7 @@ height_section = height / section_num
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('delaunay_240.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('output/slow_delaunay.mp4', fourcc, fps, (int(width), int(height)))
 
 save_video = False
 visual_video = True
