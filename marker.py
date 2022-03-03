@@ -87,24 +87,54 @@ def find_index(e, s):
     return False
 
 
-def condition1(s):
+def condition1(e, e_s):
+    s = [e[e_s[i]] for i in range(4)]
+
+    if s[0][0] in s[1]:
+        A = np.array(s[0][0])
+        B = np.array(s[0][1])
+        D = np.array(s[1][s[1].index(A.tolist())-1])
+    else:
+        A = np.array(s[0][1])
+        B = np.array(s[0][0])
+        D = np.array(s[1][s[1].index(A.tolist()) - 1])
+    if s[2][0] in s[3]:
+        C = np.array(s[2][0])
+    else:
+        C = np.array(s[2][1])
+
     c_1 = False
-    AB = (s[0][1] - s[0][0]) / np.linalg.norm(s[0][1] - s[0][0])
-    CB = (s[0][1] - s[2][0]) / np.linalg.norm(s[0][1] - s[2][0])
-    AD = (s[1][1] - s[0][0]) / np.linalg.norm(s[1][1] - s[0][0])
-    CD = (s[1][1] - s[2][0]) / np.linalg.norm(s[1][1] - s[2][0])
+    AB = (B - A) / np.linalg.norm(B - A)
+    CB = (B - C) / np.linalg.norm(B - C)
+    AD = (D - A) / np.linalg.norm(D - A)
+    CD = (D - C) / np.linalg.norm(D - C)
 
     if 1-np.square(np.dot(AB, CD)) < 0.01 and 1-np.square(np.dot(AD, CB)) < 0.01:
         c_1 = True
     return c_1
 
 
-def condition2(s):
+def condition2(e, e_s):
+    s = [e[e_s[i]] for i in range(4)]
+
+    if s[0][0] in s[1]:
+        A = np.array(s[0][0])
+        B = np.array(s[0][1])
+        D = np.array(s[1][s[1].index(A.tolist())-1])
+    else:
+        A = np.array(s[0][1])
+        B = np.array(s[0][0])
+        D = np.array(s[1][s[1].index(A.tolist()) - 1])
+    if s[2][0] in s[3]:
+        C = np.array(s[2][0])
+    else:
+        C = np.array(s[2][1])
+
     c_2 = False
-    AB = (s[0][1] - s[0][0]) / np.linalg.norm(s[0][1] - s[0][0])
-    CB = (s[0][1] - s[2][0]) / np.linalg.norm(s[0][1] - s[2][0])
-    AD = (s[1][1] - s[0][0]) / np.linalg.norm(s[1][1] - s[0][0])
-    CD = (s[1][1] - s[2][0]) / np.linalg.norm(s[1][1] - s[2][0])
+    AB = (B - A) / np.linalg.norm(B - A)
+    CB = (B - C) / np.linalg.norm(B - C)
+    AD = (D - A) / np.linalg.norm(D - A)
+    CD = (D - C) / np.linalg.norm(D - C)
 
     if np.square(np.dot(AD, CD)) < 0.01 and 1-np.square(np.dot(AB, CB)) < 0.01:
         c_2 = True
@@ -139,7 +169,7 @@ def find_marker(m):
     row, col = 7, 11
     for r in range(row):
         for c in range(col):
-            if np.array_equal(np.array([m_array[r][c], m_array[r][c+1], m_array[r+1][c], m_array[r+1][c+1]]), m):
+            if [m_array[r][c], m_array[r][c+1], m_array[r+1][c], m_array[r+1][c+1]] == m:
                 return [r, c]
     return False
 
@@ -181,6 +211,11 @@ def count_not_none(l):
 
 
 def qualify_quadrangles(input, frame_copy):
+    '''
+    :param input: markers(index 0) and quadrangles(index 1)
+    :param frame_copy: for visual output
+    :return: marker info
+    '''
     global M
 
     m_S = input[:, 0]
@@ -188,15 +223,19 @@ def qualify_quadrangles(input, frame_copy):
 
     np_S = np.array(input[:, 1].tolist(), dtype=int)
 
-    e_list = np_S.reshape(-1, 2, 2).tolist()
+    e = np_S.reshape(-1, 2, 2).tolist()
     S_list = np_S.tolist()
-    for edge in e_list:
-        if [edge[1], edge[0]] in e_list:
-            del e_list[e_list.index([edge[1], edge[0]])]
-    S = change_config_S(e_list, S_list)
-    visited = np.zeros(n)
+    for edge in e:
+        if [edge[1], edge[0]] in e:
+            del e[e.index([edge[1], edge[0]])]
+    S = change_config_S(e, S_list)
+    visited = np.zeros(n)           # check if quadrangle is visited
     m_visited = np.zeros((7, 11), dtype=int).tolist()
+
+    # e : unique edges in list type
+    # S : unique quadrangles which are represented by edge indices in list type
     for k in range(n):
+        # initialize queue and push one most strict quadrangles
         if visited[k] == 0:
             Q = Queue()
             rc_idx = find_marker(m_S[k])
@@ -208,56 +247,55 @@ def qualify_quadrangles(input, frame_copy):
 
             visited[k] = 1
             cnt = 0
-            while Q.not_empty:
-                rc_idx, s, filled_marker = Q.get()
-                m_visited[rc_idx[0]][rc_idx[1]] = 1
 
-                green = (0, 255, 0)
-                for q in [s[f] for f in filled_marker]:
-                    cv.line(frame_copy, q[0], q[1], green, 1)
-                cv.imshow("frame1", frame_copy)
-                if cv.waitKey(1) == ord('q'):
-                    cv.destroyAllWindows()
+        # clear queue while queue is not empty
+        while Q.not_empty:
+            rc_idx, s, filled_marker = Q.get()
+            m_visited[rc_idx[0]][rc_idx[1]] = 1
 
-                for i in filled_marker:
-                    idx = find_index(e, s[i])
-                    if idx:
-                        S_e = S[idx]
+            # visualize popped quad from queue on copied frame with color blue
+            blue = (255, 0, 0)
+            cache = frame_copy.copy()
+            for ed in [s[f] for f in filled_marker]:
+                cv.line(cache, e[ed][0], e[ed][1], blue, 1)
+            cv.imshow("frame1", cache)
+            if cv.waitKey(1) == ord('q'):
+                cv.destroyAllWindows()
 
-                        red = (0, 0, 255)
-                        for q in [s[f] for f in filled_marker]:
-                            cv.line(frame_copy, q[0], q[1], red, 1)
-                        cv.imshow("frame1", frame_copy)
-                        if cv.waitKey(1) == ord('q'):
-                            cv.destroyAllWindows()
+            for i in filled_marker:
+                # find adjacent quad which shares edge s[i] and save in variable 'idxs'
+                idxs = [index for index, quad in enumerate(S) if s[i] in quad]
+                if idxs is not []:
+                    for idx in idxs:
+                        rc_idx = find_marker(m_S[idx])
+                        if rc_idx and m_visited[rc_idx[0]][rc_idx[1]] == 0:
+                            S_e = S[idx]
 
-                        if condition1(S_e) or condition2(S_e):
-                            e_hat = S_e[find_e_hat(S_e, s, i)]
-                            h_idx = find_index(e, e_hat)
-                            if h_idx:
-                                if visited[h_idx] == 0 and condition1(S[h_idx]):
-                                    rc_idx = find_marker(m_S[h_idx])
+                            # visualize adjacent quad on copied frame with color red
+                            red = (0, 0, 255)
+                            cache1 = cache.copy()
+                            for ed in [S_e[j] for j in range(4)]:
+                                cv.line(cache1, e[ed][0], e[ed][1], red, 1)
+                            cv.imshow("frame1", cache1)
+                            if cv.waitKey(1) == ord('q'):
+                                cv.destroyAllWindows()
 
-                                    green = (0, 255, 0)
-                                    for q in [s[f] for f in filled_marker]:
-                                        cv.line(frame_copy, q[0], q[1], green, 1)
-                                    cv.imshow("frame1", frame_copy)
-                                    if cv.waitKey(1) == ord('q'):
-                                        cv.destroyAllWindows()
+                            if condition1(e, S_e) or condition2(e, S_e):
+                                m_visited[rc_idx[0]][rc_idx[1]] = 1
+                                visited[S.index(S_e)] = 1
+                                filled_marker, is_filled = check_marker(rc_idx, e, S_e)
+                                Q.put([rc_idx, S_e, filled_marker])
 
-                                    if rc_idx:
-                                        filled_marker, is_filled = check_marker(rc_idx, S[h_idx], h_idx)
-                                    else:
-                                        continue
-                                    Q.put([rc_idx, S[k], filled_marker])
-                                    visited[h_idx] = 1
-                                    m_visited[rc_idx[0]][rc_idx[1]] = 1
-
+                                green = (0, 255, 0)
+                                for ed in [S_e[j] for j in range(4)]:
+                                    cv.line(frame_copy, e[ed][0], e[ed][1], green, 1)
+                                cv.imshow("frame1", frame_copy)
+                                break
                 print(cnt)
                 cnt += 1
-                if Q.empty():
-                    print('queue is empty')
-                    break
+            if Q.empty():
+                print('queue is empty')
+
     return M
 
 
