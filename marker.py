@@ -8,10 +8,10 @@ import json
 with open('m_array.json') as f:
     m_array = json.load(f)['m_array']
 
-M = (np.ones((8, 12), dtype=int) * -1).tolist()
 
 def mean_int(list):
     return int(sum(list) / len(list))
+
 
 def findSubgraphsInBFS(nodes, edges):
     subgraphs = []
@@ -174,33 +174,54 @@ def find_marker(m):
     return False
 
 
-def check_marker(idx, square, s_idx):
-    global M
-
+def check_marker(idx, square, s_idx, M):
     r, c = idx
     filled = []
     if M[r][c] != -1:
         filled.append(0)
-    if M[r + 1][c] != -1:
+    if M[r][c+1] != -1:
         filled.append(1)
-    if M[r][c + 1] != -1:
+    if M[r+1][c] != -1:
         filled.append(2)
     if M[r + 1][c + 1] != -1:
         filled.append(3)
     if len(filled) == 0:
-        possible_edges = [0, 1, 2, 3]
-        return possible_edges, False
+        possible_nodes = [0, 1, 2, 3]
+        return possible_nodes, M
 
-    M[r][c] = square[s_idx][0][0]           # A
-    M[r + 1][c] = square[s_idx][0][1]       # B
-    M[r][c + 1] = square[s_idx][1][1]       # D
-    M[r + 1][c + 1] = square[s_idx][2][0]   # C
-
-    not_filled = list(set([0, 1, 2, 3]) - set(filled))
-    possible_edges = {(0, 1), (0, 2), (1, 3), (2, 3)}
+    possible_edges = [(0, 1), (0, 2), (1, 3), (2, 3)]
     comb = set(combinations(filled, 2))
-    filled_edges = list(possible_edges & comb)
-    return filled_edges, True
+    filled_edges = list(set(possible_edges) & comb)
+    possible_nodes = list({0, 1, 2, 3} - set(filled))
+    return possible_nodes, M
+
+
+def set_marker_pos(rc, ed, sq, filled, marker):
+    for n_f in filled:
+        r, c = rc
+        n_s = [ed[sq[i]] for i in range(4)]
+        if n_s[0][0] in n_s[1]:
+            A = n_s[0][0]
+            B = n_s[0][1]
+            D = n_s[1][n_s[1].index(A) - 1]
+        else:
+            A = n_s[0][1]
+            B = n_s[0][0]
+            D = n_s[1][n_s[1].index(A) - 1]
+        if n_s[2][0] in n_s[3]:
+            C = n_s[2][0]
+        else:
+            C = n_s[2][1]
+
+        if n_f == 0:
+            marker[r][c] = A
+        elif n_f == 1:
+            marker[r][c + 1] = D
+        elif n_f == 2:
+            marker[r + 1][c] = B
+        elif n_f == 3:
+            marker[r + 1][c + 1] = C
+    return marker
 
 
 def count_not_none(l):
@@ -216,7 +237,7 @@ def qualify_quadrangles(input, frame_copy):
     :param frame_copy: for visual output
     :return: marker info
     '''
-    global M
+    M = (np.ones((8, 12), dtype=int) * -1).tolist()
 
     m_S = input[:, 0]
     n = m_S.size
@@ -237,26 +258,31 @@ def qualify_quadrangles(input, frame_copy):
     for k in range(n):
         # initialize queue and push one most strict quadrangles
         if visited[k] == 0:
+            visited[k] = 1
+            cnt = 0
+
             Q = Queue()
             rc_idx = find_marker(m_S[k])
-            if rc_idx:
-                filled_marker, is_filled = check_marker(rc_idx, S[k], k)
+            if rc_idx and m_visited[rc_idx[0]][rc_idx[1]] == 0:
+                filled_marker, M = check_marker(rc_idx, S[k], k, M)
+                M = set_marker_pos(rc_idx, e, S[k], filled_marker, M)
                 Q.put([rc_idx, S[k], filled_marker])
             else:
                 continue
-
-            visited[k] = 1
-            cnt = 0
 
         # clear queue while queue is not empty
         while Q.not_empty:
             rc_idx, s, filled_marker = Q.get()
             m_visited[rc_idx[0]][rc_idx[1]] = 1
+            M = set_marker_pos(rc_idx, e, s, filled_marker, M)
 
             # visualize popped quad from queue on copied frame with color blue
+
             blue = (255, 0, 0)
+            green = (0, 255, 0)
             cache = frame_copy.copy()
             for ed in [s[f] for f in filled_marker]:
+                cv.line(frame_copy, e[ed][0], e[ed][1], green, 1)
                 cv.line(cache, e[ed][0], e[ed][1], blue, 1)
             cv.imshow("frame1", cache)
             if cv.waitKey(1) == ord('q'):
@@ -282,20 +308,34 @@ def qualify_quadrangles(input, frame_copy):
 
                             if condition1(e, S_e) or condition2(e, S_e):
                                 m_visited[rc_idx[0]][rc_idx[1]] = 1
+                                filled_marker, M = check_marker(rc_idx, e, S_e, M)
+                                M = set_marker_pos(rc_idx, e, S_e, filled_marker, M)
                                 visited[S.index(S_e)] = 1
-                                filled_marker, is_filled = check_marker(rc_idx, e, S_e)
                                 Q.put([rc_idx, S_e, filled_marker])
 
-                                green = (0, 255, 0)
                                 for ed in [S_e[j] for j in range(4)]:
                                     cv.line(frame_copy, e[ed][0], e[ed][1], green, 1)
                                 cv.imshow("frame1", frame_copy)
-                                break
+                                if cv.waitKey(1) == ord('q'):
+                                    cv.destroyAllWindows()
+                            break
+                        else:
+                            continue
                 print(cnt)
                 cnt += 1
             if Q.empty():
                 print('queue is empty')
+                break
 
+    cv.destroyAllWindows()
+    for row in M:
+        for col in row:
+            cv.circle(frame_copy, col, 4, red, -1)
+    cv.imshow("frame2", frame_copy)
+    if cv.waitKey(1) == ord('q'):
+        cv.destroyAllWindows()
+
+    print(M)
     return M
 
 
