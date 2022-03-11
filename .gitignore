@@ -5,6 +5,9 @@
 *.jpg
 *.gif
 
+#
+*.zip
+
 # ignore OpenCVTutorial files
 OpenCVTutorial
 

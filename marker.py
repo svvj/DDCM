@@ -87,21 +87,8 @@ def find_index(e, s):
     return False
 
 
-def condition1(e, e_s):
-    s = [e[e_s[i]] for i in range(4)]
-
-    if s[0][0] in s[1]:
-        A = np.array(s[0][0])
-        B = np.array(s[0][1])
-        D = np.array(s[1][s[1].index(A.tolist())-1])
-    else:
-        A = np.array(s[0][1])
-        B = np.array(s[0][0])
-        D = np.array(s[1][s[1].index(A.tolist()) - 1])
-    if s[2][0] in s[3]:
-        C = np.array(s[2][0])
-    else:
-        C = np.array(s[2][1])
+def condition1(s):
+    [A, D, B, C] = [np.array(i) for i in s]
 
     c_1 = False
     AB = (B - A) / np.linalg.norm(B - A)
@@ -114,21 +101,8 @@ def condition1(e, e_s):
     return c_1
 
 
-def condition2(e, e_s):
-    s = [e[e_s[i]] for i in range(4)]
-
-    if s[0][0] in s[1]:
-        A = np.array(s[0][0])
-        B = np.array(s[0][1])
-        D = np.array(s[1][s[1].index(A.tolist())-1])
-    else:
-        A = np.array(s[0][1])
-        B = np.array(s[0][0])
-        D = np.array(s[1][s[1].index(A.tolist()) - 1])
-    if s[2][0] in s[3]:
-        C = np.array(s[2][0])
-    else:
-        C = np.array(s[2][1])
+def condition2(s):
+    [A, D, B, C] = [np.array(i) for i in s]
 
     c_2 = False
     AB = (B - A) / np.linalg.norm(B - A)
@@ -165,63 +139,84 @@ def find_e_hat(s_e, s, l):
     return False
 
 
-def find_marker(m):
+def column(mat, i):
+    return [row[i] for row in mat]
+
+
+def find_marker(m, s):
+    if s[0][0] in s[1]:
+        A = s[0][0]
+        B, D = (s[0][1], s[1][s[1].index(A) - 1]) \
+            if s[0][1][0] < s[1][s[1].index(A) - 1][0] else (s[1][s[1].index(A) - 1], s[0][1])
+    else:
+        A = s[0][1]
+        B, D = (s[0][0], s[1][s[1].index(A) - 1]) \
+            if s[0][0][0] < s[1][s[1].index(A) - 1][0] else (s[1][s[1].index(A) - 1], s[0][0])
+    if s[2][0] in s[3]:
+        C = s[2][0]
+    else:
+        C = s[2][1]
+
+    arr = [A, D, B, C]
+    m_arr = [column(m, 0)[column(m, 1).index(i)] for i in arr]
+
     row, col = 7, 11
     for r in range(row):
         for c in range(col):
-            if [m_array[r][c], m_array[r][c+1], m_array[r+1][c], m_array[r+1][c+1]] == m:
-                return [r, c]
+            if [m_array[r][c], m_array[r][c+1], m_array[r+1][c], m_array[r+1][c+1]] == m_arr:
+                return [r, c], m_arr, arr
+    return False, m_arr, arr
+
+
+def check_marker(idx, M):
+    r, c = idx
+    filled = []
+    every_edges = [(0, 1), (0, 2), (1, 3), (2, 3)]
+    if M[r][c] != -1:
+        filled.append(0)        # A
+    if M[r][c+1] != -1:
+        filled.append(1)        # D
+    if M[r+1][c] != -1:
+        filled.append(2)        # B
+    if M[r + 1][c + 1] != -1:
+        filled.append(3)        # C
+    if len(filled) == 0:
+        filled_edges = [0, 1, 2, 3]
+        possible_nodes = [0, 1, 2, 3]
+        return filled_edges, possible_nodes, M
+
+    filled_edges = set(combinations(filled, 2))             # filled edges
+    possible_edges = [every_edges.index(i) for i in list(set(every_edges) - filled_edges)]
+    possible_nodes = list({0, 1, 2, 3} - set(filled))
+    return possible_edges, possible_nodes, M
+
+
+def is_in_2d(item, array):
+    for row in array:
+        if item in row:
+            return True
     return False
 
 
-def check_marker(idx, square, s_idx, M):
-    r, c = idx
-    filled = []
-    if M[r][c] != -1:
-        filled.append(0)
-    if M[r][c+1] != -1:
-        filled.append(1)
-    if M[r+1][c] != -1:
-        filled.append(2)
-    if M[r + 1][c + 1] != -1:
-        filled.append(3)
-    if len(filled) == 0:
-        possible_nodes = [0, 1, 2, 3]
-        return possible_nodes, M
+def set_marker_pos(rc, arr, not_filled, marker):
+    if rc == [3, 8]:
+        print(rc)
+    r, c = rc
 
-    possible_edges = [(0, 1), (0, 2), (1, 3), (2, 3)]
-    comb = set(combinations(filled, 2))
-    filled_edges = list(set(possible_edges) & comb)
-    possible_nodes = list({0, 1, 2, 3} - set(filled))
-    return possible_nodes, M
-
-
-def set_marker_pos(rc, ed, sq, filled, marker):
-    for n_f in filled:
-        r, c = rc
-        n_s = [ed[sq[i]] for i in range(4)]
-        if n_s[0][0] in n_s[1]:
-            A = n_s[0][0]
-            B = n_s[0][1]
-            D = n_s[1][n_s[1].index(A) - 1]
+    for n_f in not_filled:
+        if not is_in_2d(arr[n_f], marker):
+            if n_f == 0:
+                marker[r][c] = arr[n_f]             # A
+            elif n_f == 1:
+                marker[r][c + 1] = arr[n_f]         # D
+            elif n_f == 2:
+                marker[r + 1][c] = arr[n_f]         # B
+            elif n_f == 3:
+                marker[r + 1][c + 1] = arr[n_f]     # C
         else:
-            A = n_s[0][1]
-            B = n_s[0][0]
-            D = n_s[1][n_s[1].index(A) - 1]
-        if n_s[2][0] in n_s[3]:
-            C = n_s[2][0]
-        else:
-            C = n_s[2][1]
-
-        if n_f == 0:
-            marker[r][c] = A
-        elif n_f == 1:
-            marker[r][c + 1] = D
-        elif n_f == 2:
-            marker[r + 1][c] = B
-        elif n_f == 3:
-            marker[r + 1][c + 1] = C
-    return marker
+            print("This node is already in marker")
+            return False, marker
+    return True, marker
 
 
 def count_not_none(l):
@@ -231,18 +226,15 @@ def count_not_none(l):
     return cnt
 
 
-def qualify_quadrangles(input, frame_copy):
+def qualify_quadrangles(m_S, input, frame_copy):
     '''
     :param input: markers(index 0) and quadrangles(index 1)
     :param frame_copy: for visual output
     :return: marker info
     '''
     M = (np.ones((8, 12), dtype=int) * -1).tolist()
-
-    m_S = input[:, 0]
-    n = m_S.size
-
-    np_S = np.array(input[:, 1].tolist(), dtype=int)
+    n = len(input)
+    np_S = np.array(input.tolist(), dtype=int)
 
     e = np_S.reshape(-1, 2, 2).tolist()
     S_list = np_S.tolist()
@@ -255,6 +247,7 @@ def qualify_quadrangles(input, frame_copy):
 
     # e : unique edges in list type
     # S : unique quadrangles which are represented by edge indices in list type
+    cache1 = frame_copy.copy()
     for k in range(n):
         # initialize queue and push one most strict quadrangles
         if visited[k] == 0:
@@ -262,75 +255,71 @@ def qualify_quadrangles(input, frame_copy):
             cnt = 0
 
             Q = Queue()
-            rc_idx = find_marker(m_S[k])
+            rc_idx, m_arr, arr = find_marker(m_S, S_list[k])        # [row, col], marker numbers, [A, D, B, C]
             if rc_idx and m_visited[rc_idx[0]][rc_idx[1]] == 0:
-                filled_marker, M = check_marker(rc_idx, S[k], k, M)
-                M = set_marker_pos(rc_idx, e, S[k], filled_marker, M)
-                Q.put([rc_idx, S[k], filled_marker])
+                filled_edges, filled_marker, M = check_marker(rc_idx, M)
+                Q.put([rc_idx, arr, filled_edges, filled_marker])
             else:
                 continue
 
         # clear queue while queue is not empty
         while Q.not_empty:
-            rc_idx, s, filled_marker = Q.get()
-            m_visited[rc_idx[0]][rc_idx[1]] = 1
-            M = set_marker_pos(rc_idx, e, s, filled_marker, M)
+            if Q.empty():
+                print('queue is empty')
+                break
+            rc_idx, s, filled_edges, possible_position = Q.get()
+            if rc_idx and m_visited[rc_idx[0]][rc_idx[1]] == 0:
+                m_visited[rc_idx[0]][rc_idx[1]] = 1
+                available, M = set_marker_pos(rc_idx, s, possible_position, M)
+                if not available:
+                    red = (0, 0, 255)
+                    cache2 = cache1.copy()
+                    for ed in [S_list[idx][f] for f in range(4)]:
+                        cv.line(cache2, ed[0], ed[1], red, 1)
+                    cv.imshow("frame1", cache2)
+                    if cv.waitKey(1) == ord('q'):
+                        cv.destroyAllWindows()
+                    continue
+            else:
+                continue
 
-            # visualize popped quad from queue on copied frame with color blue
-
-            blue = (255, 0, 0)
-            green = (0, 255, 0)
-            cache = frame_copy.copy()
-            for ed in [s[f] for f in filled_marker]:
-                cv.line(frame_copy, e[ed][0], e[ed][1], green, 1)
-                cv.line(cache, e[ed][0], e[ed][1], blue, 1)
-            cv.imshow("frame1", cache)
-            if cv.waitKey(1) == ord('q'):
-                cv.destroyAllWindows()
-
-            for i in filled_marker:
+            for i in filled_edges:
                 # find adjacent quad which shares edge s[i] and save in variable 'idxs'
-                idxs = [index for index, quad in enumerate(S) if s[i] in quad]
+                idxs = [index for index, quad in enumerate(S) if S[k][i] in quad]
                 if idxs is not []:
                     for idx in idxs:
-                        rc_idx = find_marker(m_S[idx])
+                        rc_idx, m_arr, arr = find_marker(m_S, S_list[idx])
                         if rc_idx and m_visited[rc_idx[0]][rc_idx[1]] == 0:
-                            S_e = S[idx]
-
+                            # S_e = S[idx]
+                            if rc_idx == [3, 8]:
+                                print(rc_idx)
                             # visualize adjacent quad on copied frame with color red
                             red = (0, 0, 255)
-                            cache1 = cache.copy()
-                            for ed in [S_e[j] for j in range(4)]:
-                                cv.line(cache1, e[ed][0], e[ed][1], red, 1)
-                            cv.imshow("frame1", cache1)
+                            cache2 = cache1.copy()
+                            for ed in [S_list[idx][f] for f in range(4)]:
+                                cv.line(cache2, ed[0], ed[1], red, 1)
+                            cv.imshow("frame1", cache2)
                             if cv.waitKey(1) == ord('q'):
                                 cv.destroyAllWindows()
 
-                            if condition1(e, S_e) or condition2(e, S_e):
-                                m_visited[rc_idx[0]][rc_idx[1]] = 1
-                                filled_marker, M = check_marker(rc_idx, e, S_e, M)
-                                M = set_marker_pos(rc_idx, e, S_e, filled_marker, M)
-                                visited[S.index(S_e)] = 1
-                                Q.put([rc_idx, S_e, filled_marker])
-
-                                for ed in [S_e[j] for j in range(4)]:
-                                    cv.line(frame_copy, e[ed][0], e[ed][1], green, 1)
-                                cv.imshow("frame1", frame_copy)
-                                if cv.waitKey(1) == ord('q'):
-                                    cv.destroyAllWindows()
-                            break
+                            # condition1 :
+                            if condition1(arr) or condition2(arr):
+                                # m_visited[rc_idx[0]][rc_idx[1]] = 1
+                                filled_edges, filled_marker, M = check_marker(rc_idx, M)
+                                # available, M = set_marker_pos(rc_idx, s, possible_position, M)
+                                # visited[S.index(S_e)] = 1
+                                Q.put([rc_idx, arr, filled_edges, filled_marker])
+                            # break
                         else:
                             continue
                 print(cnt)
                 cnt += 1
-            if Q.empty():
-                print('queue is empty')
-                break
 
     cv.destroyAllWindows()
     for row in M:
         for col in row:
-            cv.circle(frame_copy, col, 4, red, -1)
+            if col != -1:
+                cv.circle(frame_copy, col, 4, red, -1)
     cv.imshow("frame2", frame_copy)
     if cv.waitKey(1) == ord('q'):
         cv.destroyAllWindows()
@@ -339,7 +328,7 @@ def qualify_quadrangles(input, frame_copy):
     return M
 
 
-def find_quadrangles(tri_edges, v_edges, frame_copy, markers):
+def find_quadrangles(v_n, tri_edges, v_edges, frame_copy):
     # TODO: Use BFS
     quadrangles = []
     constructed_quad = []
@@ -359,12 +348,13 @@ def find_quadrangles(tri_edges, v_edges, frame_copy, markers):
                         constructed_quad.append([i, t])
                         a_quad, L, seq_quad, m_id = is_appropriate_quad(quad_edges)
                         if a_quad:
-                            quadrangles.append([L, m_id, seq_quad])
+                            quadrangles.append([L, seq_quad])
 
     quadrangles = np.array(quadrangles, dtype=object)
-    sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1:3]
-    q_quads = qualify_quadrangles(sorted_quads, frame_copy)
+    sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1]
+    q_quads = qualify_quadrangles(v_n, sorted_quads, frame_copy)
     return q_quads
+
 
 if __name__ == "__main__":
     n_list = [(0, 0), (0, 1), (0, 2), (0, 3),

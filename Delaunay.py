@@ -131,7 +131,7 @@ while cap.isOpened():
         v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
         tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
         v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
-        quadrangles = marker.find_quadrangles(tri_edges, v_edges, frame_copy, np_nodes.tolist())
+        quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
 
         for q in quadrangles:
             cv.line(frame_copy, q[0][0], q[0][1], green, 1)
