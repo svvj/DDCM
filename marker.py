@@ -2,7 +2,6 @@ from queue import Queue
 from itertools import combinations
 
 import numpy as np
-import cv2 as cv
 import json
 
 with open('m_array.json') as f:
@@ -47,7 +46,6 @@ def unique_rows(a):
 
 
 def is_appropriate_quad(v_quad):
-    # TODO: make unique edge list and return
     m = np.array(v_quad[:, :, 0].tolist())
     quad = np.array(v_quad[:, :, 1].tolist())
     vec = quad[:, 0] - quad[:, 1]
@@ -203,6 +201,20 @@ def set_marker_pos(rc, arr, not_filled, marker):
         print(rc)
     r, c = rc
 
+    filled = {0, 1, 2, 3} - set(not_filled)
+    for f in filled:
+        if f == 0:
+            m = marker[r][c]  # A
+        elif f == 1:
+            m = marker[r][c + 1]  # D
+        elif f == 2:
+            m = marker[r + 1][c]  # B
+        elif f == 3:
+            m = marker[r + 1][c + 1]  # C
+
+        if m == -1 or m not in arr:
+            return False, marker
+
     for n_f in not_filled:
         if not is_in_2d(arr[n_f], marker):
             if n_f == 0:
@@ -214,7 +226,7 @@ def set_marker_pos(rc, arr, not_filled, marker):
             elif n_f == 3:
                 marker[r + 1][c + 1] = arr[n_f]     # C
         else:
-            print("This node is already in marker")
+            # print("This node is already in marker")
             return False, marker
     return True, marker
 
@@ -247,7 +259,6 @@ def qualify_quadrangles(m_S, input, frame_copy):
 
     # e : unique edges in list type
     # S : unique quadrangles which are represented by edge indices in list type
-    cache1 = frame_copy.copy()
     for k in range(n):
         # initialize queue and push one most strict quadrangles
         if visited[k] == 0:
@@ -272,13 +283,6 @@ def qualify_quadrangles(m_S, input, frame_copy):
                 m_visited[rc_idx[0]][rc_idx[1]] = 1
                 available, M = set_marker_pos(rc_idx, s, possible_position, M)
                 if not available:
-                    red = (0, 0, 255)
-                    cache2 = cache1.copy()
-                    for ed in [S_list[idx][f] for f in range(4)]:
-                        cv.line(cache2, ed[0], ed[1], red, 1)
-                    cv.imshow("frame1", cache2)
-                    if cv.waitKey(1) == ord('q'):
-                        cv.destroyAllWindows()
                     continue
             else:
                 continue
@@ -290,46 +294,19 @@ def qualify_quadrangles(m_S, input, frame_copy):
                     for idx in idxs:
                         rc_idx, m_arr, arr = find_marker(m_S, S_list[idx])
                         if rc_idx and m_visited[rc_idx[0]][rc_idx[1]] == 0:
-                            # S_e = S[idx]
-                            if rc_idx == [3, 8]:
-                                print(rc_idx)
-                            # visualize adjacent quad on copied frame with color red
-                            red = (0, 0, 255)
-                            cache2 = cache1.copy()
-                            for ed in [S_list[idx][f] for f in range(4)]:
-                                cv.line(cache2, ed[0], ed[1], red, 1)
-                            cv.imshow("frame1", cache2)
-                            if cv.waitKey(1) == ord('q'):
-                                cv.destroyAllWindows()
-
-                            # condition1 :
                             if condition1(arr) or condition2(arr):
-                                # m_visited[rc_idx[0]][rc_idx[1]] = 1
                                 filled_edges, filled_marker, M = check_marker(rc_idx, M)
-                                # available, M = set_marker_pos(rc_idx, s, possible_position, M)
-                                # visited[S.index(S_e)] = 1
                                 Q.put([rc_idx, arr, filled_edges, filled_marker])
-                            # break
                         else:
                             continue
-                print(cnt)
+                # print(cnt)
                 cnt += 1
 
-    cv.destroyAllWindows()
-    for row in M:
-        for col in row:
-            if col != -1:
-                cv.circle(frame_copy, col, 4, red, -1)
-    cv.imshow("frame2", frame_copy)
-    if cv.waitKey(1) == ord('q'):
-        cv.destroyAllWindows()
-
-    print(M)
+    # print(M)
     return M
 
 
 def find_quadrangles(v_n, tri_edges, v_edges, frame_copy):
-    # TODO: Use BFS
     quadrangles = []
     constructed_quad = []
     for i, e in enumerate(tri_edges):
