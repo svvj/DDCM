@@ -45,6 +45,20 @@ def visualize_marker(markers):
         cv.circle(frame_copy, subgraph['c'], dot_size, blue, circle_type)
 
 
+def draw_grid(m, image):
+    green = (0, 255, 0)
+    row = len(m)
+    col = len(m[0])
+    for r in range(row):
+        for c in range(col):
+            if r != row - 1 and m[r][c] != -1 and m[r+1][c] != -1:
+                cv.line(image, m[r][c], m[r + 1][c], green, 1)
+            if c != col - 1 and m[r][c] != -1 and m[r][c+1] != -1:
+                cv.line(image, m[r][c], m[r][c + 1], green, 1)
+
+    cv.imshow("grid", image)
+
+
 while cap.isOpened():
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -133,18 +147,11 @@ while cap.isOpened():
         v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
         quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
 
-        for q in quadrangles:
-            cv.line(frame_copy, q[0][0], q[0][1], green, 1)
-            cv.line(frame_copy, q[1][0], q[1][1], green, 1)
-            cv.line(frame_copy, q[2][0], q[2][1], green, 1)
-            cv.line(frame_copy, q[3][0], q[3][1], green, 1)
-
-
     # Show keypoints
     if save_video:
         out.write(frame_copy)
     if visual_video:
-        cv.imshow("frame", frame_copy)
+        draw_grid(quadrangles, frame_copy)
 
     if cv.waitKey(1) == ord('q'):
         break
