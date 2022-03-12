@@ -7,7 +7,6 @@ def mean_int(list):
     return int(sum(list) / len(list))
 
 def findSubgraphsInBFS(nodes, edges):
-    i = 0
     subgraphs = []
 
     for node in nodes:
@@ -34,59 +33,37 @@ def findSubgraphsInBFS(nodes, edges):
     return subgraphs
 
 
-def unique_rows(a):
-    a = np.ascontiguousarray(a)
-    unique_a = np.unique(a.view([('', a.dtype)]*a.shape[1]))
-    return unique_a.view(a.dtype).reshape((unique_a.shape[0], a.shape[1]))
-
-
-def is_appropriate_quad(v_quad):
+def is_appropriate_quad(quad):
     # TODO: make unique edge list and return
-    m = np.array(v_quad[:, :, 0].tolist())
-    quad = np.array(v_quad[:, :, 1].tolist())
     vec = quad[:, 0] - quad[:, 1]
     n_v = np.array([v / np.linalg.norm(v) for v in vec])
+    in_vec = []
     if quad[0][0] in quad[1]:
         idx0 = int((quad[0][0] == quad[1][1]).all())
-        a = [0, 0]
-        b = [0, 1]
-        d = [1, idx0-1]
+        A = quad[0][0]
+        B = quad[0][1]
+        D = quad[1][idx0-1]
         if quad[2][0] in quad[3]:
-            c = [2, 0]
+            C = quad[2][0]
         else:
-            c = [2, 1]
+            C = quad[2][1]
     else:
         idx0 = int((quad[0][1] == quad[1][1]).all())
-        a = [0, 1]
-        b = [0, 0]
-        d = [1, idx0 - 1]
+        A = quad[0][1]
+        B = quad[0][0]
+        D = quad[1][idx0-1]
         if quad[2][0] in quad[3]:
-            c = [2, 0]
+            C = quad[2][0]
         else:
-            c = [2, 1]
-    A = quad[a[0]][a[1]]
-    B = quad[b[0]][b[1]]
-    C = quad[c[0]][c[1]]
-    D = quad[d[0]][d[1]]
-
+            C = quad[2][1]
     in_vec = [C - A, B - D]
-    marker_id = np.array([m[a[0]][a[1]], m[b[0]][b[1]], m[c[0]][c[1]], m[d[0]][d[1]]])
 
     n_in_v = np.array([i_v / np.linalg.norm(i_v) for i_v in in_vec])
-    L_Se = 1 - 1 / 3 * (np.dot(-n_v[0], n_v[1])) ** 2 \
-           - 1 / 3 * (np.dot(-n_v[2], n_v[3])) ** 2 \
-           - 1 / 3 * (np.dot(n_in_v[0], n_in_v[1])) ** 2
+    L_Se = 1 - 1/3 * (np.dot(-n_v[0], n_v[1]))**2 - 1/3 * (np.dot(-n_v[2], n_v[3]))**2 - 1/3 * (np.dot(n_in_v[0], n_in_v[1]))**2
     if 0.6 <= L_Se:
-        return True, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]]), marker_id
+        return True, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]])
     else:
-        return False, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]]), marker_id
-
-
-def find_index(e, s):
-    for i, n in enumerate(e):
-        if np.equal(n, s).all() or np.equal(np.array([n[1], n[0]]), s).all():
-            return i
-    return False
+        return False, L_Se, np.array([[A, B], [A, D], [C, B], [C, D]])
 
 def find_index(e, s):
     for i, n in enumerate(e):
@@ -133,19 +110,15 @@ def verify_quadrangles(quads):
 
 
 def qualify_quadrangles(S, frame_copy):
-    m_S = S[:, 0]
-    S = S[:, 1]
     n = S.size
     e = np.array([[q[0][1], q[1][1]] for q in S])
     visited = np.zeros(n)
-    M_S = []
     M = []
     for k in range(S.size):
         if len(M) == 77:
             break
         if visited[k] == 0:
             M.append(verify_quadrangles(S[k]))
-            M_S.append(m_S[k])
             Q = Queue()
             Q.put(S[k])
             visited[k] = 1
@@ -170,7 +143,6 @@ def qualify_quadrangles(S, frame_copy):
                             if h_idx:
                                 if visited[h_idx] == 0 and condition1(S[h_idx]):
                                     M.append(verify_quadrangles(S[h_idx]))
-                                    M_S.append(m_S[h_idx])
                                     Q.put(S[h_idx])
                                     visited[h_idx] = 1
 
@@ -179,36 +151,35 @@ def qualify_quadrangles(S, frame_copy):
                 if Q.empty():
                     print('queue is empty')
                     break
-    return M, M_S
+    return M
 
 
-def find_quadrangles(tri_edges, v_edges, frame_copy):
+def find_quadrangles(tri_edges, frame_copy, markers, v_triangles):
     # TODO: Use BFS
     quadrangles = []
     constructed_quad = []
     for i, e in enumerate(tri_edges):
         for j in range(3):
-            t_list = list(set(np.where(np.array(tri_edges) == np.array(e[j]))[0]))
-            quad = np.array([v_edges[i][(j - 1) % 3], v_edges[i][(j - 2) % 3]], dtype=object)
+            t_list = list(set(np.where(tri_edges == e[j])[0]))
+            quad = np.array([e[(j-1) % 3], e[(j-2) % 3]])
             for t in t_list:
                 if i == t or constructed_quad.count([t, i]) != 0:
                     continue
                 ad_tri = tri_edges[t]
                 for idx, a_t in enumerate(ad_tri):
-                    if (np.array(a_t) == e[j]).all() or (np.array([a_t[1], a_t[0]]) == e[j]).all():
+                    if np.array(a_t == e[j]).all() or (np.array([a_t[1], a_t[0]]) == e[j]).all():
                         ad_idx = idx
-                        ad_edges = np.array([v_edges[t][(ad_idx - 1) % 3], v_edges[t][(ad_idx - 2) % 3]], dtype=object)
+                        ad_edges = np.array([ad_tri[(ad_idx-1) % 3], ad_tri[(ad_idx-2) % 3]])
                         quad_edges = np.concatenate((quad, ad_edges), axis=0)
                         constructed_quad.append([i, t])
-                        a_quad, L, seq_quad, m_id = is_appropriate_quad(quad_edges)
+                        a_quad, L, seq_quad = is_appropriate_quad(quad_edges)
                         if a_quad:
-                            quadrangles.append([L, m_id, seq_quad])
+                            quadrangles.append([L, seq_quad])
 
     quadrangles = np.array(quadrangles, dtype=object)
-    sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1:3]
-    q_quads, m_quads = qualify_quadrangles(sorted_quads, frame_copy)
-    return q_quads, m_quads
-
+    sorted_quads = quadrangles[quadrangles[:, 0].argsort()][::-1][:, 1]
+    q_quads = qualify_quadrangles(sorted_quads, frame_copy)
+    return q_quads
 
 if __name__ == "__main__":
     n_list = [(0, 0), (0, 1), (0, 2), (0, 3),
