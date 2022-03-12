@@ -59,6 +59,7 @@ def draw_grid(m, image):
     cv.imshow("grid", image)
 
 
+frame_num = 0
 while cap.isOpened():
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -66,7 +67,7 @@ while cap.isOpened():
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
-
+    frame_num += 1
     frame_copy = frame.copy()
 
     # Display the resulting frame
@@ -112,7 +113,7 @@ while cap.isOpened():
         for i in range(n-1):
             for j in range(i+1, n):
                 dst = (points[i][0] - points[j][0])**2 + (points[i][1] - points[j][1])**2
-                if dst < 300:
+                if dst < 400:
                     nodes.append(points[i])
                     nodes.append(points[j])
                     edge = [points[i], points[j]]
@@ -120,32 +121,32 @@ while cap.isOpened():
                         cv.line(frame, edge[0], edge[1], (255, 0, 0), 2, 1)
                     edges.append(edge)
 
-        # Identify markers
-        node_sets = set(nodes)
-        nodes = list(node_sets)
-        v_n = [[1, list(o)] for o in list(set(points) - node_sets)]
+    # Identify markers
+    node_sets = set(nodes)
+    nodes = list(node_sets)
+    v_n = [[1, list(o)] for o in list(set(points) - node_sets)]
 
-        np_nodes = np.array([i[1] for i in v_n])        # numpy nodes array for scipy delaunay triangulation
-        subtrees = marker.findSubgraphsInBFS(nodes, edges)
-        for i, subtree in enumerate(subtrees):
-            if len(subtree['n']) == 2:
-                v_n.append([2, subtree['c']])
-            elif len(subtree['n']) == 3:
-                v_n.append([3, subtree['c']])
-            elif len(subtree['n']) == 4:
-                v_n.append([4, subtree['c']])
-            else:
-                continue
-            np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
+    np_nodes = np.array([i[1] for i in v_n])        # numpy nodes array for scipy delaunay triangulation
+    subtrees = marker.findSubgraphsInBFS(nodes, edges)
+    for i, subtree in enumerate(subtrees):
+        if len(subtree['n']) == 2:
+            v_n.append([2, subtree['c']])
+        elif len(subtree['n']) == 3:
+            v_n.append([3, subtree['c']])
+        elif len(subtree['n']) == 4:
+            v_n.append([4, subtree['c']])
+        else:
+            continue
+        np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
 
 
-        delaunay = Delaunay(np_nodes)
-        green = (0, 255, 0)
-        np_triangles = np_nodes[delaunay.simplices]
-        v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
-        tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
-        v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
-        quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
+    delaunay = Delaunay(np_nodes)
+    green = (0, 255, 0)
+    np_triangles = np_nodes[delaunay.simplices]
+    v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
+    tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
+    v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
+    quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
 
     # Show keypoints
     if save_video:
