@@ -1,6 +1,7 @@
 # Delaunay
 
 from scipy.spatial import Delaunay
+from frame_by_frame import fbf
 
 import numpy as np
 import cv2 as cv
@@ -139,14 +140,17 @@ while cap.isOpened():
             continue
         np_nodes = np.concatenate([np_nodes, [np.array(subtree['c'])]], axis=0)
 
-
-    delaunay = Delaunay(np_nodes)
-    green = (0, 255, 0)
-    np_triangles = np_nodes[delaunay.simplices]
-    v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
-    tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
-    v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
-    quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
+    if frame_num == 1:
+        delaunay = Delaunay(np_nodes)
+        green = (0, 255, 0)
+        np_triangles = np_nodes[delaunay.simplices]
+        v_triangles = np.array(v_n, dtype=object)[delaunay.simplices]
+        tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
+        v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
+        quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
+    else:
+        if quadrangles:
+            quadrangles = fbf(quadrangles)
 
     # Show keypoints
     if save_video:
