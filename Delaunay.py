@@ -8,7 +8,7 @@ import cv2 as cv
 import hash
 import marker
 
-cap = cv.VideoCapture('data/slow.mp4')
+cap = cv.VideoCapture('data/fast.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
@@ -21,12 +21,13 @@ height_section = height / section_num
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('output/slow_delaunay.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('fbf_fast.mp4', fourcc, fps, (int(width), int(height)))
 
-save_video = False
+save_video = True
 visual_video = True
 visual_grid = False
 marker_visual = False
+visual_marker_edge = False
 
 
 def visualize_marker(markers):
@@ -70,6 +71,7 @@ while cap.isOpened():
         break
     frame_num += 1
     frame_copy = frame.copy()
+    fbf_frame = frame.copy()
 
     # Display the resulting frame
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -106,7 +108,6 @@ while cap.isOpened():
         cv.imshow("grid", frame_copy)
 
     # Find dot cluster section by section
-    visual_marker_edge = True
     for key, points in hashMap.grid.items():
         edges = []
         nodes = []
@@ -148,19 +149,25 @@ while cap.isOpened():
         tri_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in np_triangles]
         v_edges = [[[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]] for t in v_triangles]
         quadrangles = marker.find_quadrangles(v_n, tri_edges, v_edges, frame_copy)
+        cache = frame.copy()
     else:
         if quadrangles:
-            quadrangles = fbf(quadrangles)
+            cache = frame.copy()
+            cache, quadrangles = fbf(v_n, quadrangles, width, height, cache)
+            cv.imshow("square", cache)
+            if cv.waitKey(1) == ord('q'):
+                cv.destroyAllWindows()
 
     # Show keypoints
     if save_video:
-        out.write(frame_copy)
+        out.write(cache)
     if visual_video:
-        draw_grid(quadrangles, frame_copy)
+        draw_grid(quadrangles, fbf_frame)
 
     if cv.waitKey(1) == ord('q'):
         break
 
+print("break")
 # When everything done, release the capture
 cap.release()
 out.release()

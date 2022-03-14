@@ -197,8 +197,6 @@ def is_in_2d(item, array):
 
 
 def set_marker_pos(rc, arr, not_filled, marker):
-    if rc == [3, 8]:
-        print(rc)
     r, c = rc
 
     filled = {0, 1, 2, 3} - set(not_filled)
