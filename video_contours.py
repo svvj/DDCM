@@ -3,7 +3,7 @@
 import numpy as np
 import cv2 as cv
 
-cap = cv.VideoCapture('240fps.mp4')
+cap = cv.VideoCapture('data/slow.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
@@ -13,7 +13,7 @@ height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('contours_240.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('slow_contours_240.mp4', fourcc, fps, (int(width), int(height)))
 
 while cap.isOpened():
     # Capture frame-by-frame
@@ -27,7 +27,7 @@ while cap.isOpened():
     ret, thresh = cv.threshold(gray, 100, 255, cv.THRESH_BINARY)
 
     contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    with_contours = cv.drawContours(frame, contours, -1, (0, 255, 0), 1)
+    with_contours = cv.drawContours(frame, contours, -1, (0, 255, 0), 2)
 
     # Show keypoints
     out.write(frame)

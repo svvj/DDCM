@@ -18,7 +18,7 @@ height_section = height / section_num
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('output/video_marker_240.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('slow_points.mp4', fourcc, fps, (int(width), int(height)))
 
 save_video = False
 visual_video = True
@@ -119,10 +119,11 @@ while cap.isOpened():
         visualize_marker(markers)
 
     # Show keypoints
-    if save_video:
-        out.write(frame_copy)
     if visual_video:
         cv.imshow("frame", frame_copy)
+    # if save_video:
+    #     out.write(frame_copy)
+    out.write(frame_copy)
 
     if cv.waitKey(1) == ord('q'):
         break

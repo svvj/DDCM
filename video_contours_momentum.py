@@ -3,7 +3,7 @@
 import numpy as np
 import cv2 as cv
 
-cap = cv.VideoCapture('60fps_DDCM_harder.mp4')
+cap = cv.VideoCapture('data/slow.mp4')
 # if not cap.isOpened():
 #     print("Cannot open camera")
 #     exit()
@@ -12,7 +12,7 @@ height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('contours_momentum_harder.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('slow_contours_momentum.mp4', fourcc, fps, (int(width), int(height)))
 
 while cap.isOpened():
     # Capture frame-by-frame
@@ -36,7 +36,7 @@ while cap.isOpened():
             cY = int(M['m01'] / M['m00'])
             potential_marker.append([cX, cY])
 
-            cv.circle(frame, (cX, cY), 1, (255, 0, 0), -1)
+            cv.circle(frame, (cX, cY), 3, (255, 0, 0), -1)
             # cv.drawContours(frame, [i], 0, (0, 0, 255), 1)
         else:
             print(f"PassingZeroDivision: M['m00'] is zero in {i}")

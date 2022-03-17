@@ -21,7 +21,7 @@ height_section = height / section_num
 fps = cap.get(cv.CAP_PROP_FPS)
 print(f"width: {width}, height: {height}, fps: {fps}")
 fourcc = cv.VideoWriter_fourcc(*'mp4v')
-out = cv.VideoWriter('fbf_fast.mp4', fourcc, fps, (int(width), int(height)))
+out = cv.VideoWriter('output/fast_test.mp4', fourcc, fps, (int(width), int(height)))
 
 save_video = True
 visual_video = True
